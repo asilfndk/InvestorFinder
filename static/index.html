@@ -1,0 +1,818 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>AI Investor Finder - Startup Assistant</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css"
+    />
+    <style>
+      .chat-container {
+        height: calc(100vh - 200px);
+      }
+      .message-user {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      }
+      .message-assistant {
+        background: linear-gradient(135deg, #f5f7fa 0%, #e4e8ec 100%);
+      }
+      .investor-card {
+        transition: all 0.3s ease;
+      }
+      .investor-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 10px 40px rgba(0, 0, 0, 0.1);
+      }
+      .investor-chat-cards .bg-white {
+        transition: all 0.2s ease;
+      }
+      .investor-chat-cards .bg-white:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+      }
+      .line-clamp-2 {
+        display: -webkit-box;
+        -webkit-line-clamp: 2;
+        -webkit-box-orient: vertical;
+        overflow: hidden;
+      }
+      .typing-indicator span {
+        animation: bounce 1.4s infinite ease-in-out;
+      }
+      .typing-indicator span:nth-child(1) {
+        animation-delay: -0.32s;
+      }
+      .typing-indicator span:nth-child(2) {
+        animation-delay: -0.16s;
+      }
+      @keyframes bounce {
+        0%,
+        80%,
+        100% {
+          transform: scale(0);
+        }
+        40% {
+          transform: scale(1);
+        }
+      }
+    </style>
+  </head>
+  <body class="bg-gray-100 min-h-screen">
+    <!-- Header -->
+    <header
+      class="bg-gradient-to-r from-indigo-600 to-purple-600 text-white py-4 px-6 shadow-lg"
+    >
+      <div class="max-w-7xl mx-auto flex items-center justify-between">
+        <div class="flex items-center space-x-3">
+          <i class="fas fa-robot text-3xl"></i>
+          <div>
+            <h1 class="text-2xl font-bold">AI Investor Finder</h1>
+            <p class="text-sm text-indigo-200">
+              Find the right US investors for your startup
+            </p>
+          </div>
+        </div>
+        <div class="flex items-center space-x-4">
+          <span class="px-3 py-1 bg-green-500 rounded-full text-sm">
+            <i class="fas fa-circle text-xs mr-1"></i> Online
+          </span>
+        </div>
+      </div>
+    </header>
+
+    <div class="max-w-7xl mx-auto p-6 grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <!-- Chat Panel -->
+      <div class="lg:col-span-2 bg-white rounded-2xl shadow-xl overflow-hidden">
+        <!-- Chat Messages -->
+        <div
+          id="chatMessages"
+          class="chat-container overflow-y-auto p-6 space-y-4"
+        >
+          <!-- Welcome Message -->
+          <div class="flex items-start space-x-3">
+            <div
+              class="w-10 h-10 bg-gradient-to-r from-indigo-500 to-purple-500 rounded-full flex items-center justify-center"
+            >
+              <i class="fas fa-robot text-white"></i>
+            </div>
+            <div
+              class="message-assistant text-gray-800 rounded-2xl rounded-tl-none px-4 py-3 max-w-xl"
+            >
+              <p>Hello! 👋 I'm your AI-powered investor finder assistant.</p>
+              <p class="mt-2">
+                Tell me about your startup's sector (e.g., healthcare,
+                e-commerce, AI), and I'll find relevant US-based investors and
+                compile their contact information.
+              </p>
+              <p class="mt-2 text-sm text-gray-600">
+                Example: "I'm building an AI-based healthcare startup, find me
+                relevant investors"
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Chat Input -->
+        <div class="border-t p-4">
+          <form id="chatForm" class="flex space-x-3">
+            <input
+              type="text"
+              id="messageInput"
+              placeholder="Type your message... (e.g., find AI startup investors)"
+              class="flex-1 px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+            />
+            <button
+              type="submit"
+              class="px-6 py-3 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-xl hover:from-indigo-700 hover:to-purple-700 transition-all flex items-center space-x-2"
+            >
+              <span>Send</span>
+              <i class="fas fa-paper-plane"></i>
+            </button>
+          </form>
+        </div>
+      </div>
+
+      <!-- Investors Panel -->
+      <div class="bg-white rounded-2xl shadow-xl overflow-hidden">
+        <div
+          class="bg-gradient-to-r from-indigo-600 to-purple-600 text-white px-6 py-4"
+        >
+          <div class="flex items-center justify-between">
+            <h2 class="text-lg font-semibold flex items-center">
+              <i class="fas fa-users mr-2"></i>
+              Found Investors
+            </h2>
+            <button
+              id="clearConversation"
+              class="px-3 py-1 bg-white/20 hover:bg-white/30 rounded-lg text-sm transition-colors"
+              title="Reset Conversation"
+            >
+              <i class="fas fa-trash-alt mr-1"></i> Reset
+            </button>
+          </div>
+        </div>
+
+        <!-- Conversation Summary -->
+        <div
+          id="conversationSummary"
+          class="px-4 py-3 bg-indigo-50 border-b hidden"
+        >
+          <div class="flex items-center justify-between text-sm">
+            <span class="text-indigo-700">
+              <i class="fas fa-chart-line mr-1"></i>
+              <span id="showingInvestors">0</span>/<span id="totalInvestors"
+                >0</span
+              >
+              investors shown
+            </span>
+            <span class="text-indigo-600" id="sectorsInfo"></span>
+          </div>
+        </div>
+
+        <div
+          id="investorsList"
+          class="p-4 space-y-3 overflow-y-auto"
+          style="max-height: calc(100vh - 400px)"
+        >
+          <div class="text-center text-gray-500 py-8">
+            <i class="fas fa-search text-4xl mb-3 text-gray-300"></i>
+            <p>No investors searched yet</p>
+            <p class="text-sm">Specify a sector in the chat</p>
+          </div>
+        </div>
+
+        <!-- Load More Button -->
+        <div id="loadMoreContainer" class="p-4 border-t hidden">
+          <button
+            id="loadMoreBtn"
+            class="w-full py-3 bg-gradient-to-r from-indigo-500 to-purple-500 text-white rounded-xl hover:from-indigo-600 hover:to-purple-600 transition-all flex items-center justify-center space-x-2"
+          >
+            <i class="fas fa-plus-circle"></i>
+            <span id="loadMoreText">Show More Investors</span>
+          </button>
+          <p
+            id="remainingInfo"
+            class="text-center text-sm text-gray-500 mt-2"
+          ></p>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      let conversationId = null;
+      let totalInvestorsFound = 0;
+      let currentlyShowing = 0;
+      let hasMoreInvestors = false;
+      let allDisplayedInvestors = [];
+
+      const chatMessages = document.getElementById("chatMessages");
+      const chatForm = document.getElementById("chatForm");
+      const messageInput = document.getElementById("messageInput");
+      const investorsList = document.getElementById("investorsList");
+      const clearBtn = document.getElementById("clearConversation");
+      const summaryDiv = document.getElementById("conversationSummary");
+      const totalInvestorsSpan = document.getElementById("totalInvestors");
+      const showingInvestorsSpan = document.getElementById("showingInvestors");
+      const sectorsInfoSpan = document.getElementById("sectorsInfo");
+      const loadMoreContainer = document.getElementById("loadMoreContainer");
+      const loadMoreBtn = document.getElementById("loadMoreBtn");
+      const loadMoreText = document.getElementById("loadMoreText");
+      const remainingInfo = document.getElementById("remainingInfo");
+
+      // Update conversation summary with pagination info
+      function updateSummary(
+        investors,
+        sectors = [],
+        total = 0,
+        hasMore = false
+      ) {
+        if (investors && investors.length > 0) {
+          summaryDiv.classList.remove("hidden");
+          currentlyShowing = investors.length;
+          totalInvestorsFound = total || investors.length;
+          hasMoreInvestors = hasMore;
+
+          showingInvestorsSpan.textContent = currentlyShowing;
+          totalInvestorsSpan.textContent = totalInvestorsFound;
+
+          if (sectors && sectors.length > 0) {
+            sectorsInfoSpan.textContent = sectors.join(", ");
+          }
+
+          // Show/hide load more button
+          if (hasMore) {
+            loadMoreContainer.classList.remove("hidden");
+            const remaining = totalInvestorsFound - currentlyShowing;
+            loadMoreText.textContent = `Show More Investors (${Math.min(
+              10,
+              remaining
+            )} people)`;
+            remainingInfo.textContent = `${remaining} more investors available`;
+          } else {
+            loadMoreContainer.classList.add("hidden");
+          }
+        }
+      }
+
+      // Load more investors handler
+      loadMoreBtn.addEventListener("click", async () => {
+        if (!conversationId || !hasMoreInvestors) return;
+
+        // Send a pagination request
+        messageInput.value = "show more investors";
+        chatForm.dispatchEvent(new Event("submit"));
+      });
+
+      // Clear conversation
+      async function clearConversation() {
+        if (!conversationId) return;
+
+        try {
+          await fetch(`/api/conversation/${conversationId}`, {
+            method: "DELETE",
+          });
+        } catch (error) {
+          console.error("Error clearing conversation:", error);
+        }
+
+        // Reset UI and state
+        conversationId = null;
+        totalInvestorsFound = 0;
+        currentlyShowing = 0;
+        hasMoreInvestors = false;
+        allDisplayedInvestors = [];
+        summaryDiv.classList.add("hidden");
+        loadMoreContainer.classList.add("hidden");
+        investorsList.innerHTML = `
+          <div class="text-center text-gray-500 py-8">
+            <i class="fas fa-search text-4xl mb-3 text-gray-300"></i>
+            <p>No investors searched yet</p>
+            <p class="text-sm">Specify a sector in the chat</p>
+          </div>
+        `;
+
+        // Clear chat except welcome message
+        chatMessages.innerHTML = `
+          <div class="flex items-start space-x-3">
+            <div class="w-10 h-10 bg-gradient-to-r from-indigo-500 to-purple-500 rounded-full flex items-center justify-center">
+              <i class="fas fa-robot text-white"></i>
+            </div>
+            <div class="message-assistant text-gray-800 rounded-2xl rounded-tl-none px-4 py-3 max-w-xl">
+              <p>Hello! 👋 I'm your AI-powered investor finder assistant.</p>
+              <p class="mt-2">Tell me about your startup's sector (e.g., healthcare, e-commerce, AI), and I'll find relevant US-based investors and compile their contact information.</p>
+              <p class="mt-2 text-sm text-gray-600">Example: "I'm building an AI-based healthcare startup, find me relevant investors"</p>
+            </div>
+          </div>
+        `;
+      }
+
+      clearBtn.addEventListener("click", clearConversation);
+
+      // Add message to chat
+      function addMessage(content, isUser = false) {
+        const messageDiv = document.createElement("div");
+        messageDiv.className = `flex items-start space-x-3 ${
+          isUser ? "flex-row-reverse space-x-reverse" : ""
+        }`;
+
+        const icon = isUser ? "fa-user" : "fa-robot";
+        const bgClass = isUser
+          ? "message-user text-white"
+          : "message-assistant text-gray-800";
+        const roundedClass = isUser ? "rounded-tr-none" : "rounded-tl-none";
+
+        messageDiv.innerHTML = `
+                <div class="w-10 h-10 bg-gradient-to-r ${
+                  isUser
+                    ? "from-purple-500 to-pink-500"
+                    : "from-indigo-500 to-purple-500"
+                } rounded-full flex items-center justify-center flex-shrink-0">
+                    <i class="fas ${icon} text-white"></i>
+                </div>
+                <div class="${bgClass} rounded-2xl ${roundedClass} px-4 py-3 max-w-xl">
+                    ${content.replace(/\n/g, "<br>")}
+                </div>
+            `;
+
+        chatMessages.appendChild(messageDiv);
+        chatMessages.scrollTop = chatMessages.scrollHeight;
+      }
+
+      // Render investors (append mode for pagination)
+      function renderInvestors(investors, append = false) {
+        if (!investors || investors.length === 0) return;
+
+        if (!append) {
+          investorsList.innerHTML = "";
+          allDisplayedInvestors = investors;
+        } else {
+          allDisplayedInvestors = [...allDisplayedInvestors, ...investors];
+        }
+
+        const investorsToRender = append ? investors : allDisplayedInvestors;
+
+        investorsToRender.forEach((investor) => {
+          const card = document.createElement("div");
+          card.className =
+            "investor-card bg-gray-50 rounded-xl p-4 border border-gray-200";
+
+          let investmentFocusHtml = "";
+          if (
+            investor.investment_focus &&
+            investor.investment_focus.length > 0
+          ) {
+            investmentFocusHtml = `
+                        <div class="flex flex-wrap gap-1 mt-2">
+                            ${investor.investment_focus
+                              .map(
+                                (focus) =>
+                                  `<span class="px-2 py-0.5 bg-indigo-100 text-indigo-700 rounded-full text-xs">${focus}</span>`
+                              )
+                              .join("")}
+                        </div>
+                    `;
+          }
+
+          let bioHtml = "";
+          if (investor.bio) {
+            const shortBio =
+              investor.bio.length > 150
+                ? investor.bio.substring(0, 150) + "..."
+                : investor.bio;
+            bioHtml = `
+              <p class="text-sm text-gray-600 mt-2 italic">
+                <i class="fas fa-quote-left text-xs text-gray-400 mr-1"></i>
+                ${shortBio}
+              </p>
+            `;
+          }
+
+          const enrichedBadge =
+            investor.source && investor.source.includes("enriched")
+              ? '<span class="px-2 py-0.5 bg-blue-100 text-blue-700 rounded-full text-xs ml-1"><i class="fab fa-linkedin"></i> Detailed</span>'
+              : "";
+
+          card.innerHTML = `
+                    <div class="flex items-start justify-between">
+                        <div class="flex-1">
+                            <h3 class="font-semibold text-gray-800">${
+                              investor.name
+                            }</h3>
+                            ${
+                              investor.title
+                                ? `<p class="text-sm text-gray-600">${investor.title}</p>`
+                                : ""
+                            }
+                            ${
+                              investor.company
+                                ? `<p class="text-sm text-indigo-600 font-medium">${investor.company}</p>`
+                                : ""
+                            }
+                        </div>
+                        <div class="flex flex-col items-end gap-1">
+                          <span class="px-2 py-1 bg-green-100 text-green-700 rounded-full text-xs">${
+                            investor.source
+                              ? investor.source.replace("_enriched", "")
+                              : "web"
+                          }</span>
+                          ${enrichedBadge}
+                        </div>
+                    </div>
+                    
+                    ${
+                      investor.location
+                        ? `<p class="text-sm text-gray-500 mt-2"><i class="fas fa-map-marker-alt mr-1"></i>${investor.location}</p>`
+                        : ""
+                    }
+                    
+                    ${bioHtml}
+                    
+                    ${investmentFocusHtml}
+                    
+                    <div class="mt-3 flex flex-wrap gap-2">
+                        ${
+                          investor.email
+                            ? `
+                            <a href="mailto:${investor.email}" class="px-3 py-1 bg-blue-100 text-blue-700 rounded-lg text-sm hover:bg-blue-200 transition-colors">
+                                <i class="fas fa-envelope mr-1"></i>${investor.email}
+                            </a>
+                        `
+                            : ""
+                        }
+                        ${
+                          investor.linkedin_url
+                            ? `
+                            <a href="${investor.linkedin_url}" target="_blank" class="px-3 py-1 bg-blue-600 text-white rounded-lg text-sm hover:bg-blue-700 transition-colors">
+                                <i class="fab fa-linkedin mr-1"></i>LinkedIn
+                            </a>
+                        `
+                            : ""
+                        }
+                    </div>
+                `;
+
+          investorsList.appendChild(card);
+        });
+
+        showingInvestorsSpan.textContent = allDisplayedInvestors.length;
+      }
+
+      // Create streaming message container
+      function createStreamingMessage() {
+        const existingStreaming = document.getElementById("streamingMessage");
+        if (existingStreaming) {
+          existingStreaming.remove();
+        }
+
+        const messageDiv = document.createElement("div");
+        messageDiv.id = "streamingMessage";
+        messageDiv.className = "flex items-start space-x-3";
+        messageDiv.innerHTML = `
+          <div class="w-10 h-10 bg-gradient-to-r from-indigo-500 to-purple-500 rounded-full flex items-center justify-center flex-shrink-0">
+            <i class="fas fa-robot text-white"></i>
+          </div>
+          <div class="message-assistant text-gray-800 rounded-2xl rounded-tl-none px-4 py-3 max-w-xl">
+            <span id="streamingContent"></span>
+            <span class="streaming-cursor animate-pulse">▊</span>
+          </div>
+        `;
+        chatMessages.appendChild(messageDiv);
+        chatMessages.scrollTop = chatMessages.scrollHeight;
+        return document.getElementById("streamingContent");
+      }
+
+      function finalizeStreamingMessage() {
+        const cursor = document.querySelector(".streaming-cursor");
+        if (cursor) cursor.remove();
+        const streamingMsg = document.getElementById("streamingMessage");
+        if (streamingMsg) streamingMsg.removeAttribute("id");
+        const streamingContent = document.getElementById("streamingContent");
+        if (streamingContent) streamingContent.removeAttribute("id");
+      }
+
+      function addStatusMessage(text) {
+        const statusDiv = document.createElement("div");
+        statusDiv.className = "flex justify-center status-message";
+        statusDiv.innerHTML = `
+          <div class="px-4 py-2 bg-indigo-100 text-indigo-700 rounded-full text-sm">
+            ${text}
+          </div>
+        `;
+        chatMessages.appendChild(statusDiv);
+        chatMessages.scrollTop = chatMessages.scrollHeight;
+        return statusDiv;
+      }
+
+      function addInvestorCardsToChat(
+        investors,
+        hasMore = false,
+        remaining = 0
+      ) {
+        const containerDiv = document.createElement("div");
+        containerDiv.className =
+          "flex items-start space-x-3 investor-chat-cards";
+
+        let investorCardsHtml = investors
+          .map((inv, idx) => {
+            const focusTags = (inv.investment_focus || [])
+              .slice(0, 3)
+              .map(
+                (f) =>
+                  `<span class="px-2 py-0.5 bg-indigo-100 text-indigo-600 rounded-full text-xs">${f}</span>`
+              )
+              .join("");
+
+            const bioShort = inv.bio
+              ? inv.bio.length > 100
+                ? inv.bio.substring(0, 100) + "..."
+                : inv.bio
+              : "";
+
+            return `
+            <div class="bg-white border border-gray-200 rounded-xl p-3 shadow-sm hover:shadow-md transition-shadow">
+              <div class="flex items-start justify-between gap-2">
+                <div class="flex-1 min-w-0">
+                  <h4 class="font-semibold text-gray-800 text-sm truncate">${
+                    idx + 1
+                  }. ${inv.name}</h4>
+                  ${
+                    inv.title
+                      ? `<p class="text-xs text-gray-600 truncate">${inv.title}</p>`
+                      : ""
+                  }
+                  ${
+                    inv.company
+                      ? `<p class="text-xs text-indigo-600 font-medium truncate">🏢 ${inv.company}</p>`
+                      : ""
+                  }
+                </div>
+                ${
+                  inv.linkedin_url
+                    ? `
+                  <a href="${inv.linkedin_url}" target="_blank" class="flex-shrink-0 w-7 h-7 bg-blue-600 text-white rounded-lg flex items-center justify-center hover:bg-blue-700">
+                    <i class="fab fa-linkedin text-xs"></i>
+                  </a>
+                `
+                    : ""
+                }
+              </div>
+              ${
+                inv.location
+                  ? `<p class="text-xs text-gray-500 mt-1">📍 ${inv.location}</p>`
+                  : ""
+              }
+              ${
+                bioShort
+                  ? `<p class="text-xs text-gray-600 mt-1 italic line-clamp-2">${bioShort}</p>`
+                  : ""
+              }
+              ${
+                focusTags
+                  ? `<div class="flex flex-wrap gap-1 mt-2">${focusTags}</div>`
+                  : ""
+              }
+            </div>
+          `;
+          })
+          .join("");
+
+        containerDiv.innerHTML = `
+          <div class="w-10 h-10 bg-gradient-to-r from-indigo-500 to-purple-500 rounded-full flex items-center justify-center flex-shrink-0">
+            <i class="fas fa-users text-white"></i>
+          </div>
+          <div class="flex-1 max-w-2xl">
+            <div class="bg-gradient-to-r from-indigo-50 to-purple-50 rounded-2xl rounded-tl-none p-4">
+              <div class="flex items-center justify-between mb-3">
+                <h3 class="font-semibold text-indigo-800">
+                  <i class="fas fa-user-tie mr-2"></i>Found Investors (${
+                    investors.length
+                  } people)
+                </h3>
+                ${
+                  hasMore
+                    ? `<span class="text-xs text-indigo-600 bg-indigo-100 px-2 py-1 rounded-full">+${remaining} more</span>`
+                    : ""
+                }
+              </div>
+              <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                ${investorCardsHtml}
+              </div>
+              ${
+                hasMore
+                  ? `
+                <div class="mt-3 text-center">
+                  <p class="text-sm text-indigo-600">
+                    <i class="fas fa-info-circle mr-1"></i>
+                    Type "more" or "show more investors" to see additional investors
+                  </p>
+                </div>
+              `
+                  : ""
+              }
+            </div>
+          </div>
+        `;
+
+        chatMessages.appendChild(containerDiv);
+        chatMessages.scrollTop = chatMessages.scrollHeight;
+      }
+
+      function clearStatusMessages() {
+        const statusMessages = document.querySelectorAll(".status-message");
+        statusMessages.forEach((msg) => msg.remove());
+      }
+
+      // Handle form submit with streaming
+      chatForm.addEventListener("submit", async (e) => {
+        e.preventDefault();
+
+        const message = messageInput.value.trim();
+        if (!message) return;
+
+        addMessage(message, true);
+        messageInput.value = "";
+        messageInput.disabled = true;
+
+        let streamingContent = null;
+        let statusElement = null;
+        let fullResponse = "";
+        let buffer = "";
+
+        try {
+          const response = await fetch("/api/chat/stream", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              message: message,
+              conversation_id: conversationId,
+            }),
+          });
+
+          if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+          }
+
+          const reader = response.body.getReader();
+          const decoder = new TextDecoder();
+
+          while (true) {
+            const { done, value } = await reader.read();
+            if (done) break;
+
+            buffer += decoder.decode(value, { stream: true });
+
+            const parts = buffer.split("\n\n");
+            buffer = parts.pop() || "";
+
+            for (const part of parts) {
+              const lines = part.split("\n");
+              for (const line of lines) {
+                if (line.startsWith("data: ")) {
+                  try {
+                    const data = JSON.parse(line.slice(6));
+
+                    switch (data.type) {
+                      case "start":
+                        conversationId = data.conversation_id;
+                        break;
+
+                      case "status":
+                        if (statusElement) statusElement.remove();
+                        statusElement = addStatusMessage(data.message);
+                        break;
+
+                      case "investors_found":
+                        if (statusElement) {
+                          statusElement.remove();
+                          statusElement = null;
+                        }
+                        if (data.has_more) {
+                          addStatusMessage(
+                            `✅ ${data.count} investors found! (showing ${data.showing})`
+                          );
+                        } else {
+                          addStatusMessage(`✅ ${data.count} investors found!`);
+                        }
+                        if (data.investors && data.investors.length > 0) {
+                          addInvestorCardsToChat(
+                            data.investors,
+                            data.has_more,
+                            data.remaining
+                          );
+                        }
+                        break;
+
+                      case "pagination_info":
+                        if (statusElement) {
+                          statusElement.remove();
+                          statusElement = null;
+                        }
+                        addStatusMessage(
+                          `📄 Page ${data.current_page + 1}: showing ${
+                            data.showing
+                          } investors`
+                        );
+                        break;
+
+                      case "content_start":
+                        clearStatusMessages();
+                        statusElement = null;
+                        streamingContent = createStreamingMessage();
+                        fullResponse = "";
+                        break;
+
+                      case "content":
+                        if (streamingContent) {
+                          fullResponse += data.text;
+                          let formattedText = fullResponse
+                            .replace(/\*\*(.*?)\*\*/g, "<strong>$1</strong>")
+                            .replace(/\*(.*?)\*/g, "<em>$1</em>")
+                            .replace(/\n/g, "<br>");
+                          streamingContent.innerHTML = formattedText;
+                          chatMessages.scrollTop = chatMessages.scrollHeight;
+                        }
+                        break;
+
+                      case "done":
+                        finalizeStreamingMessage();
+
+                        if (data.investors && data.investors.length > 0) {
+                          const isPagination = data.current_page > 0;
+                          renderInvestors(data.investors, isPagination);
+                          updateSummary(
+                            allDisplayedInvestors,
+                            data.sectors_discussed || [],
+                            data.total_investors_found,
+                            data.has_more_investors
+                          );
+
+                          if (isPagination) {
+                            addInvestorCardsToChat(
+                              data.investors,
+                              data.has_more_investors,
+                              data.total_investors_found -
+                                allDisplayedInvestors.length
+                            );
+                          }
+                        }
+
+                        console.log(
+                          `Response completed in ${data.processing_time_ms}ms, page: ${data.current_page}, has_more: ${data.has_more_investors}`
+                        );
+                        break;
+
+                      case "error":
+                        finalizeStreamingMessage();
+                        if (!fullResponse) {
+                          addMessage(`❌ Error: ${data.error}`);
+                        }
+                        break;
+                    }
+                  } catch (parseError) {
+                    console.log("Parse error:", parseError, "Line:", line);
+                  }
+                }
+              }
+            }
+          }
+
+          if (buffer.trim()) {
+            const lines = buffer.split("\n");
+            for (const line of lines) {
+              if (line.startsWith("data: ")) {
+                try {
+                  const data = JSON.parse(line.slice(6));
+                  if (data.type === "done") {
+                    finalizeStreamingMessage();
+                    if (data.investors && data.investors.length > 0) {
+                      const isPagination = data.current_page > 0;
+                      renderInvestors(data.investors, isPagination);
+                      updateSummary(
+                        allDisplayedInvestors,
+                        data.sectors_discussed || [],
+                        data.total_investors_found,
+                        data.has_more_investors
+                      );
+                    }
+                  }
+                } catch (e) {}
+              }
+            }
+          }
+        } catch (error) {
+          finalizeStreamingMessage();
+          addMessage("Sorry, an error occurred. Please try again.");
+          console.error("Stream error:", error);
+        }
+
+        messageInput.disabled = false;
+        messageInput.focus();
+      });
+    </script>
+  </body>
+</html>

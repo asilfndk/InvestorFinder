@@ -1,0 +1,55 @@
+# Environment
+.env
+.venv/
+venv/
+env/
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Testing
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Playwright
+playwright/.cache/
+
+# Logs
+*.log
+logs/
+
+# Data files (keep directory structure)
+data/*.db
+data/conversations/*.json
+!data/.gitkeep
+!data/conversations/.gitkeep
+
+# OS
+.DS_Store
+Thumbs.db
