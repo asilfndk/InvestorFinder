@@ -3,6 +3,8 @@ Database configuration and connection management.
 Supports SQLite for development and PostgreSQL for production.
 """
 
+import os
+from pathlib import Path
 from typing import AsyncGenerator
 from sqlalchemy.ext.asyncio import (
     create_async_engine,
@@ -66,6 +68,15 @@ class DatabaseManager:
 
         settings = get_settings()
         url = database_url or settings.database_url
+
+        # Ensure data directory exists for SQLite
+        if url.startswith("sqlite"):
+            # Extract the db file path from URL
+            # Format: sqlite+aiosqlite:///./data/investor_finder.db
+            db_path = url.split("///")[-1]
+            db_dir = Path(db_path).parent
+            db_dir.mkdir(parents=True, exist_ok=True)
+            logger.info(f"Ensured database directory exists: {db_dir}")
 
         # Determine if using SQLite
         is_sqlite = url.startswith("sqlite")
