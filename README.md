@@ -67,7 +67,7 @@ Finding the right investor is one of the biggest challenges for startups. This t
 
 ```bash
 # Clone the repository
-git clone https://github.com/yourusername/ai-investor-finder.git
+git clone https://github.com/asilfndk/ai-investor-finder.git
 cd ai-investor-finder
 
 # Create virtual environment
@@ -115,6 +115,27 @@ uvicorn app.main:app --host 0.0.0.0 --port 8000
 ```
 
 Open http://localhost:8000 in your browser.
+
+### 🐳 Docker
+
+```bash
+# Build and run with Docker Compose
+docker-compose up -d
+
+# Or build manually
+docker build -t ai-investor-finder .
+docker run -d -p 8000:8000 \
+  -e GEMINI_API_KEY=your_key \
+  -e GOOGLE_API_KEY=your_key \
+  -e GOOGLE_CX=your_cx \
+  ai-investor-finder
+
+# View logs
+docker-compose logs -f
+
+# Stop
+docker-compose down
+```
 
 ---
 
@@ -433,6 +454,6 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 **Built with ❤️ for Entrepreneurs**
 
-[Report Bug](https://github.com/yourusername/ai-investor-finder/issues) • [Request Feature](https://github.com/yourusername/ai-investor-finder/issues)
+[Report Bug](https://github.com/asilfndk/ai-investor-finder/issues) • [Request Feature](https://github.com/asilfndk/ai-investor-finder/issues)
 
 </div>

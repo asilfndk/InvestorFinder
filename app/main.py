@@ -97,6 +97,16 @@ async def root():
     return FileResponse("static/index.html")
 
 
+@app.get("/health")
+async def health_check():
+    """Health check endpoint for Docker/Kubernetes."""
+    return {
+        "status": "healthy",
+        "version": settings.app_version,
+        "environment": settings.environment.value
+    }
+
+
 @app.get("/info")
 async def app_info():
     """Get application information."""
