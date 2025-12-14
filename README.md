@@ -37,7 +37,7 @@ Finding the right investor is one of the biggest challenges for startups. This t
 
 | Feature | Description |
 |---------|-------------|
-| 🤖 **Multi-LLM Support** | Google Gemini (default), OpenAI GPT-4 |
+| 🤖 **Multi-LLM Support** | Google Gemini (default), OpenAI GPT-4, Anthropic Claude |
 | 🔍 **Smart Search** | Google Custom Search API integration |
 | 👤 **LinkedIn Scraping** | Extract investor profiles and details |
 | 💬 **Streaming Responses** | Real-time AI responses with SSE |
@@ -192,7 +192,8 @@ ai-investor-finder/
 │   ├── providers/               # Plugin-based providers
 │   │   ├── llm/                 # LLM providers
 │   │   │   ├── gemini.py        # Google Gemini
-│   │   │   └── openai_provider.py
+│   │   │   ├── openai_provider.py
+│   │   │   └── anthropic.py     # Claude
 │   │   ├── search/              # Search providers
 │   │   │   └── google.py        # Google Custom Search
 │   │   └── scraper/             # Web scrapers
@@ -222,6 +223,19 @@ ai-investor-finder/
 ├── .env.example                 # Environment template
 ├── requirements.txt             # Python dependencies
 └── README.md                    # This file
+```
+
+### Behavior & Settings
+
+- **LLM fallback**: Order is configurable via `LLM_FALLBACK_ORDER`; failed providers are skipped for `PROVIDER_FAILURE_COOLDOWN_SECONDS`.
+- **Search & scraping**: Google Custom Search + LinkedIn scraping (UA rotation, jittered delays, optional proxy). `PLAYWRIGHT_ENABLED` defaults off.
+- **Rate limit**: SlowAPI with IP-based limit (`RATE_LIMIT_PER_MINUTE`).
+- **Pagination**: SSE returns 10 investors at a time; type “more” to paginate.
+
+### Tests
+
+```bash
+pytest tests/test_health.py
 ```
 
 ### Provider System
