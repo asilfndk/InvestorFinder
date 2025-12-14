@@ -117,7 +117,14 @@
 
         <!-- Chat Input -->
         <div class="border-t p-4">
-          <form id="chatForm" class="flex space-x-3">
+          <form id="chatForm" class="flex flex-col lg:flex-row lg:items-center gap-3">
+            <select
+              id="modelSelect"
+              class="px-3 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent bg-white text-gray-700"
+            >
+              <option value="gemini">Gemini</option>
+              <option value="openai">OpenAI</option>
+            </select>
             <input
               type="text"
               id="messageInput"
@@ -211,6 +218,7 @@
       const chatMessages = document.getElementById("chatMessages");
       const chatForm = document.getElementById("chatForm");
       const messageInput = document.getElementById("messageInput");
+      const modelSelect = document.getElementById("modelSelect");
       const investorsList = document.getElementById("investorsList");
       const clearBtn = document.getElementById("clearConversation");
       const summaryDiv = document.getElementById("conversationSummary");
@@ -650,6 +658,7 @@
             body: JSON.stringify({
               message: message,
               conversation_id: conversationId,
+              model_provider: modelSelect.value || undefined,
             }),
           });
 
@@ -806,7 +815,11 @@
           }
         } catch (error) {
           finalizeStreamingMessage();
-          addMessage("Sorry, an error occurred. Please try again.");
+          addMessage(
+            `Sorry, an error occurred while calling ${
+              modelSelect.value
+            }: ${error.message}`
+          );
           console.error("Stream error:", error);
         }
 

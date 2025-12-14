@@ -2,13 +2,16 @@
 Investor Service - Handles investor search and profile scraping.
 """
 
-from typing import List, Tuple, Optional
+from typing import List, Tuple, Optional, Dict, Any
 import logging
 import asyncio
+import time
 
+from app.config import get_settings
 from app.core.providers import get_search, get_scraper
 from app.core.events import event_bus, Event, EventType
 from app.models import InvestorProfile, SearchResult
+from app.core.exceptions import AppException
 
 logger = logging.getLogger(__name__)
 
@@ -24,12 +27,16 @@ class InvestorService:
         search_provider: str = "google",
         scraper_provider: str = "linkedin"
     ):
+        self._settings = get_settings()
         self.search_provider_name = search_provider
         self.scraper_provider_name = scraper_provider
         # Store all found investors
         self._all_investors: List[InvestorProfile] = []
         self._current_page = 0
         self._page_size = 10
+        self._scrape_delay = max(0.0, float(self._settings.linkedin_scrape_delay))
+        self._scrape_max_concurrency = max(1, int(self._settings.linkedin_max_concurrency))
+        self._cache: Dict[str, Dict[str, Any]] = {}
 
     async def find_investors(
         self,
@@ -52,6 +59,12 @@ class InvestorService:
         if not location:
             location = "United States"
 
+        cache_key = self._cache_key(sectors, location, num_results)
+        cached = self._get_cached(cache_key)
+        if cached:
+            logger.info("Returning cached search results")
+            return cached["investors"], cached["search_results"]
+
         # Publish search started event
         await event_bus.publish(Event(
             type=EventType.SEARCH_STARTED,
@@ -62,12 +75,35 @@ class InvestorService:
             # Get search provider using new registry
             search_provider = await get_search(self.search_provider_name)
 
-            # Search for investors
-            search_results = await search_provider.search_investors(
-                sectors=sectors,
-                location=location,
-                num_results=num_results
-            )
+            # Search for investors with retry/backoff and timeout
+            last_error = None
+            for attempt in range(self._settings.search_max_retries + 1):
+                try:
+                    search_results = await asyncio.wait_for(
+                        search_provider.search_investors(
+                            sectors=sectors,
+                            location=location,
+                            num_results=num_results
+                        ),
+                        timeout=self._settings.search_timeout_seconds
+                    )
+                    break
+                except asyncio.TimeoutError:
+                    last_error = f"Search timeout after {self._settings.search_timeout_seconds}s"
+                    logger.warning(last_error)
+                except Exception as e:
+                    last_error = str(e)
+                    logger.warning(f"Search attempt {attempt + 1} failed: {e}")
+
+                if attempt < self._settings.search_max_retries:
+                    backoff = 0.5 * (2 ** attempt)
+                    await asyncio.sleep(backoff)
+
+            if not search_results:
+                raise AppException(
+                    code="search_failed",
+                    message=last_error or "No search results returned"
+                )
 
             # Publish search completed event
             await event_bus.publish(Event(
@@ -216,6 +252,9 @@ class InvestorService:
         self._all_investors = investors
         self._current_page = 0
 
+        # Cache results
+        self._set_cached(cache_key, investors, search_results)
+
         return investors, search_results
 
     async def _enrich_investor_profiles(
@@ -233,26 +272,38 @@ class InvestorService:
                 logger.info("Scraper doesn't support profile enrichment")
                 return investors
 
-            enriched_investors = []
-            enrich_count = 0
+            to_enrich: List[tuple[int, InvestorProfile]] = []
+            for idx, investor in enumerate(investors):
+                if len(to_enrich) < max_enrich and investor.linkedin_url:
+                    to_enrich.append((idx, investor))
 
-            for investor in investors:
-                if enrich_count < max_enrich and investor.linkedin_url:
+            if not to_enrich:
+                return investors
+
+            semaphore = asyncio.Semaphore(self._scrape_max_concurrency)
+            results = list(investors)
+
+            async def enrich_one(idx: int, inv: InvestorProfile) -> tuple[int, InvestorProfile]:
+                async with semaphore:
                     try:
-                        enriched = await scraper.enrich_profile(investor)
-                        enriched_investors.append(enriched)
-                        enrich_count += 1
-                        # Small delay to avoid rate limiting
-                        await asyncio.sleep(0.2)
+                        enriched = await scraper.enrich_profile(inv)
+                        return idx, enriched
                     except Exception as e:
-                        logger.warning(
-                            f"Failed to enrich {investor.name}: {e}")
-                        enriched_investors.append(investor)
-                else:
-                    enriched_investors.append(investor)
+                        logger.warning(f"Failed to enrich {inv.name}: {e}")
+                        return idx, inv
+                    finally:
+                        if self._scrape_delay:
+                            await asyncio.sleep(self._scrape_delay)
 
-            logger.info(f"Enriched {enrich_count} investor profiles")
-            return enriched_investors
+            enriched_results = await asyncio.gather(
+                *(enrich_one(idx, inv) for idx, inv in to_enrich)
+            )
+
+            for idx, enriched in enriched_results:
+                results[idx] = enriched
+
+            logger.info(f"Enriched {len(enriched_results)} investor profiles")
+            return results
 
         except Exception as e:
             logger.error(f"Profile enrichment failed: {e}")
@@ -306,3 +357,27 @@ class InvestorService:
     async def get_investor_details(self, linkedin_url: str) -> Optional[InvestorProfile]:
         """Get detailed investor information from LinkedIn URL."""
         return await self._scrape_profile(linkedin_url)
+
+    def _cache_key(self, sectors: List[str], location: str, num_results: int) -> str:
+        sectors_key = ",".join(sorted([s.lower() for s in sectors]))
+        return f"{sectors_key}|{location.lower()}|{num_results}"
+
+    def _get_cached(self, key: str) -> Optional[Dict[str, Any]]:
+        cached = self._cache.get(key)
+        if not cached:
+            return None
+        ttl_seconds = self._settings.search_cache_ttl_minutes * 60
+        if time.time() - cached["ts"] > ttl_seconds:
+            self._cache.pop(key, None)
+            return None
+        return cached
+
+    def _set_cached(self, key: str, investors: List[InvestorProfile], search_results: List[SearchResult]) -> None:
+        ttl_seconds = self._settings.search_cache_ttl_minutes * 60
+        if ttl_seconds <= 0:
+            return
+        self._cache[key] = {
+            "ts": time.time(),
+            "investors": investors,
+            "search_results": search_results
+        }

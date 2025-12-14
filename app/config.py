@@ -34,6 +34,11 @@ class Settings(BaseSettings):
     # Server
     host: str = Field(default="0.0.0.0", env="HOST")
     port: int = Field(default=8000, env="PORT")
+    allowed_origins: str = Field(
+        default="*",
+        env="ALLOWED_ORIGINS",
+        description="Comma-separated origins for CORS (use * for all)"
+    )
 
     # LLM Providers
     # Gemini
@@ -62,8 +67,17 @@ class Settings(BaseSettings):
     # Rate Limiting
     rate_limit_per_minute: int = Field(default=30, env="RATE_LIMIT_PER_MINUTE")
 
+    # Search behavior
+    search_timeout_seconds: int = Field(
+        default=15, env="SEARCH_TIMEOUT_SECONDS")
+    search_max_retries: int = Field(default=2, env="SEARCH_MAX_RETRIES")
+    search_cache_ttl_minutes: int = Field(
+        default=20, env="SEARCH_CACHE_TTL_MINUTES")
+
     # Scraping
     linkedin_scrape_delay: int = Field(default=2, env="LINKEDIN_SCRAPE_DELAY")
+    linkedin_max_concurrency: int = Field(
+        default=3, env="LINKEDIN_MAX_CONCURRENCY")
     scraping_timeout: int = Field(default=30, env="SCRAPING_TIMEOUT")
 
     # Logging
@@ -72,6 +86,7 @@ class Settings(BaseSettings):
         default="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
         env="LOG_FORMAT"
     )
+    log_json: bool = Field(default=False, env="LOG_JSON")
 
     # Memory & Persistence
     memory_persistence_enabled: bool = Field(
@@ -81,6 +96,8 @@ class Settings(BaseSettings):
     conversation_max_ttl_hours: int = Field(
         default=24, env="CONVERSATION_MAX_TTL_HOURS")
     max_conversations: int = Field(default=1000, env="MAX_CONVERSATIONS")
+    max_messages_per_conversation: int = Field(
+        default=100, env="MAX_MESSAGES_PER_CONVERSATION")
 
     # Database
     database_url: str = Field(
@@ -118,6 +135,14 @@ class Settings(BaseSettings):
         """Check if a provider has its API key configured."""
         config = self.get_llm_config(provider)
         return bool(config.get("api_key"))
+
+    def parsed_allowed_origins(self) -> list[str]:
+        """Return allowed origins for CORS as list."""
+        raw = self.allowed_origins.strip()
+        if not raw:
+            return ["*"]
+        origins = [o.strip() for o in raw.split(",") if o.strip()]
+        return origins or ["*"]
 
 
 @lru_cache()

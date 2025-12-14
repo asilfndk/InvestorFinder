@@ -76,6 +76,10 @@ class ChatRequest(BaseModel):
             raise ValueError("Message cannot be empty")
         return v.strip()
 
+    model_config = {
+        "protected_namespaces": ()
+    }
+
 
 class ChatResponse(BaseModel):
     """Chat response to user."""
@@ -88,6 +92,10 @@ class ChatResponse(BaseModel):
     total_investors_found: int = 0
     model_used: Optional[str] = None
     processing_time_ms: Optional[int] = None
+
+    model_config = {
+        "protected_namespaces": ()
+    }
 
 
 class InvestorSearchRequest(BaseModel):

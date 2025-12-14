@@ -93,15 +93,33 @@ cp .env.example .env
 nano .env  # or use your preferred editor
 ```
 
-**Required Environment Variables:**
+**Environment Variables (key ones):**
 
 ```env
-# Required
+# Required for Gemini (default)
 GEMINI_API_KEY=your_gemini_api_key_here
 
-# Optional (for better search results)
+# Optional LLMs
+OPENAI_API_KEY=your_openai_api_key_here
+ANTHROPIC_API_KEY=your_anthropic_api_key_here
+DEFAULT_LLM_PROVIDER=gemini  # gemini | openai | anthropic
+
+# Search (Google Custom Search)
 GOOGLE_SEARCH_API_KEY=your_google_search_api_key
 GOOGLE_SEARCH_ENGINE_ID=your_search_engine_id
+
+# CORS & logging
+ALLOWED_ORIGINS=http://localhost:8000,http://127.0.0.1:8000
+LOG_JSON=false
+
+# Scraping
+LINKEDIN_SCRAPE_DELAY=0.2
+LINKEDIN_MAX_CONCURRENCY=3
+
+# Search behavior
+SEARCH_TIMEOUT_SECONDS=15
+SEARCH_MAX_RETRIES=2
+SEARCH_CACHE_TTL_MINUTES=20
 ```
 
 ### Running the Application
@@ -126,9 +144,13 @@ docker-compose up -d
 docker build -t ai-investor-finder .
 docker run -d -p 8000:8000 \
   -e GEMINI_API_KEY=your_key \
-  -e GOOGLE_API_KEY=your_key \
-  -e GOOGLE_CX=your_cx \
+  -e GOOGLE_SEARCH_API_KEY=your_key \
+  -e GOOGLE_SEARCH_ENGINE_ID=your_cx \
+  -e DEFAULT_LLM_PROVIDER=gemini \
   ai-investor-finder
+```
+
+> Not: `docker-compose` `.env` dosyasındaki değişkenleri otomatik okur (GEMINI/OPENAI/ANTHROPIC ve Google arama, scrape, log ayarları).
 
 # View logs
 docker-compose logs -f
@@ -268,6 +290,35 @@ Content-Type: application/json
 
 **Response**: Server-Sent Events (SSE) stream
 
+Quick SSE example in JavaScript:
+
+```js
+const res = await fetch("/api/chat/stream", {
+  method: "POST",
+  headers: { "Content-Type": "application/json" },
+  body: JSON.stringify({
+    message: "Find AI investors in Silicon Valley",
+    model_provider: "gemini" // or "openai"
+  })
+});
+
+const reader = res.body.getReader();
+const decoder = new TextDecoder();
+let buffer = "";
+
+while (true) {
+  const { value, done } = await reader.read();
+  if (done) break;
+  buffer += decoder.decode(value, { stream: true });
+  for (const block of buffer.split("\n\n")) {
+    if (!block.startsWith("data: ")) continue;
+    const payload = JSON.parse(block.slice(6));
+    console.log(payload.type, payload);
+  }
+  buffer = "";
+}
+```
+
 #### Regular Chat Response
 
 ```http
@@ -291,7 +342,7 @@ GET /api/providers
 **Response**:
 ```json
 {
-  "llm": ["gemini", "openai"],
+  "llm": ["gemini", "openai", "anthropic"],
   "search": ["google"],
   "scraper": ["linkedin"]
 }

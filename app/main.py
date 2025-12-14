@@ -22,10 +22,13 @@ import app.providers  # noqa: F401
 
 # Configure logging
 settings = get_settings()
-logging.basicConfig(
-    level=getattr(logging, settings.log_level),
-    format=settings.log_format
-)
+log_kwargs = {
+    "level": getattr(logging, settings.log_level),
+    "format": settings.log_format
+}
+if settings.log_json:
+    log_kwargs["format"] = '{"time":"%(asctime)s","level":"%(levelname)s","name":"%(name)s","message":"%(message)s"}'
+logging.basicConfig(**log_kwargs)
 logger = logging.getLogger(__name__)
 
 
@@ -74,10 +77,12 @@ async def app_exception_handler(request: Request, exc: AppException):
 
 
 # CORS middleware
+allowed_origins = settings.parsed_allowed_origins()
+allow_all_origins = "*" in allowed_origins
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # Configure properly for production
-    allow_credentials=True,
+    allow_origins=["*"] if allow_all_origins else allowed_origins,
+    allow_credentials=not allow_all_origins,
     allow_methods=["*"],
     allow_headers=["*"],
 )
@@ -110,6 +115,9 @@ async def health_check():
 @app.get("/info")
 async def app_info():
     """Get application information."""
+    allowed_origins = settings.parsed_allowed_origins()
+    search_ready = bool(
+        settings.google_search_api_key and settings.google_search_engine_id)
     return {
         "name": settings.app_name,
         "version": settings.app_version,
@@ -119,7 +127,13 @@ async def app_info():
             "search": registry.list_providers("search"),
             "scraper": registry.list_providers("scraper")
         },
-        "default_llm": settings.default_llm_provider
+        "configured_providers": {
+            "llm": [p for p in registry.list_providers("llm")
+                    if settings.is_provider_configured(p)],
+            "search": {"google": search_ready}
+        },
+        "default_llm": settings.default_llm_provider,
+        "cors_origins": allowed_origins
     }
 
 

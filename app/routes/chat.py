@@ -20,6 +20,7 @@ from app.models import (
 from app.services import ChatService, InvestorService
 from app.core.exceptions import AppException
 from app.core.providers import registry
+from app.config import get_settings
 
 logger = logging.getLogger(__name__)
 
@@ -190,10 +191,28 @@ async def list_conversations():
 @router.get("/providers")
 async def list_providers():
     """List all available providers."""
+    settings = get_settings()
+    llm_providers = registry.list_providers("llm")
+    search_providers = registry.list_providers("search")
+    scraper_providers = registry.list_providers("scraper")
+
+    configured_llms = [
+        provider for provider in llm_providers
+        if settings.is_provider_configured(provider)
+    ]
+    search_ready = {
+        provider: bool(settings.google_search_api_key and settings.google_search_engine_id)
+        for provider in search_providers
+    }
+    scraper_ready = {provider: True for provider in scraper_providers}
+
     return {
-        "llm_providers": registry.list_providers("llm"),
-        "search_providers": registry.list_providers("search"),
-        "scraper_providers": registry.list_providers("scraper")
+        "llm_providers": llm_providers,
+        "configured_llm_providers": configured_llms,
+        "search_providers": search_providers,
+        "search_ready": search_ready,
+        "scraper_providers": scraper_providers,
+        "scraper_ready": scraper_ready
     }
 
 
@@ -202,15 +221,22 @@ async def health_check():
     """Health check endpoint with provider status."""
     from datetime import datetime
 
+    settings = get_settings()
     providers_status = {}
 
     # Check LLM providers
     for provider in registry.list_providers("llm"):
-        providers_status[f"llm.{provider}"] = True
+        providers_status[f"llm.{provider}"] = settings.is_provider_configured(provider)
 
     # Check search providers
     for provider in registry.list_providers("search"):
-        providers_status[f"search.{provider}"] = True
+        providers_status[f"search.{provider}"] = bool(
+            settings.google_search_api_key and settings.google_search_engine_id
+        )
+
+    # Scraper providers (assumed available if registered)
+    for provider in registry.list_providers("scraper"):
+        providers_status[f"scraper.{provider}"] = True
 
     return HealthResponse(
         status="healthy",

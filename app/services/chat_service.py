@@ -8,7 +8,9 @@ import uuid
 import time
 import logging
 import asyncio
+import re
 
+from app.config import get_settings
 from app.core.protocols import LLMConfig
 from app.core.providers import get_llm, registry
 from app.core.exceptions import AppException
@@ -33,30 +35,32 @@ class ChatService:
     Orchestrates LLM, search, scraping providers, and conversation memory.
     """
 
-    # Sector keywords for extraction (English only for US focus)
+    # Sector keywords for extraction (multi-lingual lightweight)
     SECTOR_KEYWORDS = {
-        "healthcare": ["health", "healthcare", "medical", "biotech", "medtech", "pharma", "healthtech"],
-        "ecommerce": ["ecommerce", "e-commerce", "retail", "marketplace", "dtc", "direct to consumer"],
-        "ai": ["ai", "artificial intelligence", "machine learning", "ml", "deep learning", "llm", "generative ai"],
-        "fintech": ["fintech", "finance", "payment", "banking", "neobank", "defi", "crypto", "blockchain"],
-        "edtech": ["edtech", "education", "learning", "online education", "e-learning"],
-        "saas": ["saas", "software", "b2b", "enterprise", "cloud", "platform"],
-        "climate": ["climate", "cleantech", "sustainability", "green", "renewable", "carbon"],
-        "gaming": ["gaming", "game", "entertainment", "esports", "metaverse"],
-        "foodtech": ["food", "foodtech", "agtech", "agriculture", "delivery"],
-        "logistics": ["logistics", "supply chain", "shipping", "freight", "warehouse"],
-        "proptech": ["proptech", "real estate", "property", "housing"],
-        "cybersecurity": ["cybersecurity", "security", "infosec", "privacy"],
-        "robotics": ["robotics", "automation", "manufacturing", "hardware"],
+        "healthcare": ["health", "healthcare", "medical", "biotech", "medtech", "pharma", "healthtech", "sağlık", "biyoteknoloji"],
+        "ecommerce": ["ecommerce", "e-commerce", "retail", "marketplace", "dtc", "direct to consumer", "alışveriş", "perakende"],
+        "ai": ["ai", "artificial intelligence", "machine learning", "ml", "deep learning", "llm", "generative ai", "yapay zeka"],
+        "fintech": ["fintech", "finance", "payment", "banking", "neobank", "defi", "crypto", "blockchain", "finans", "ödeme", "banka"],
+        "edtech": ["edtech", "education", "learning", "online education", "e-learning", "eğitim", "öğrenme"],
+        "saas": ["saas", "software", "b2b", "enterprise", "cloud", "platform", "yazılım"],
+        "climate": ["climate", "cleantech", "sustainability", "green", "renewable", "carbon", "iklim", "sürdürülebilirlik"],
+        "gaming": ["gaming", "game", "entertainment", "esports", "metaverse", "oyun"],
+        "foodtech": ["food", "foodtech", "agtech", "agriculture", "delivery", "yemek", "gıda"],
+        "logistics": ["logistics", "supply chain", "shipping", "freight", "warehouse", "lojistik"],
+        "proptech": ["proptech", "real estate", "property", "housing", "emlak"],
+        "cybersecurity": ["cybersecurity", "security", "infosec", "privacy", "siber güvenlik"],
+        "robotics": ["robotics", "automation", "manufacturing", "hardware", "robotik", "otomasyon"],
+        "mobility": ["mobility", "transport", "automotive", "ev", "ulaşım", "otomotiv"]
     }
 
-    # Triggers for investor search (English)
+    # Triggers for investor search (English + Turkish)
     SEARCH_TRIGGERS = [
         "investor", "investors", "investment", "invest",
         "funding", "capital", "raise", "raising",
         "find", "search", "look for", "looking for",
         "startup", "venture", "vc", "angel",
-        "seed", "series a", "series b"
+        "seed", "series a", "series b",
+        "yatırımcı", "yatırım", "sermaye", "fon", "girişim"
     ]
 
     # Triggers for showing more investors (pagination)
@@ -71,8 +75,9 @@ class ChatService:
         default_llm_provider: str = "gemini",
         default_model: str = "gemini-2.0-flash"
     ):
-        self.default_llm_provider = default_llm_provider
-        self.default_model = default_model
+        self._settings = get_settings()
+        self.default_llm_provider = default_llm_provider or self._settings.default_llm_provider
+        self.default_model = default_model or self._settings.gemini_model
         self._llm_provider = None
         self._investor_service = InvestorService()
         self._memory_service: MemoryService = get_memory_service()
@@ -89,10 +94,12 @@ class ChatService:
 
         # Configure memory service
         self._memory_service.configure(
-            max_conversations=1000,
-            max_messages=100,
-            ttl_hours=24,
-            persistence_path="data/conversations"
+            max_conversations=self._settings.max_conversations,
+            max_messages=self._settings.max_messages_per_conversation,
+            ttl_hours=self._settings.conversation_max_ttl_hours,
+            persistence_path=self._settings.memory_persistence_path
+            if self._settings.memory_persistence_enabled
+            else None
         )
 
         logger.info("Chat service initialized with memory support")
@@ -134,6 +141,8 @@ class ChatService:
         new_investors: List[InvestorProfile] = []
         sectors: List[str] = []
 
+        location = self._extract_location(request.message)
+
         if self._should_search_investors(request.message):
             sectors = self._extract_sectors(request.message)
 
@@ -141,6 +150,7 @@ class ChatService:
                 # Request more investors for comprehensive results
                 new_investors, new_search_results = await self._investor_service.find_investors(
                     sectors=sectors,
+                    location=location,
                     num_results=30  # Get more results
                 )
                 logger.info(
@@ -278,6 +288,7 @@ class ChatService:
         new_investors: List[InvestorProfile] = []
         sectors: List[str] = []
         current_page_investors: List[InvestorProfile] = []
+        location = self._extract_location(request.message)
 
         if is_pagination_request:
             # Get next page of investors
@@ -318,13 +329,14 @@ class ChatService:
 
             yield {
                 "type": "status",
-                "message": f"🔍 Searching for US-based investors in {', '.join(sectors)}..."
+                "message": f"🔍 Searching for investors in {', '.join(sectors)} ({location or 'United States'})..."
             }
 
             try:
                 # Request more investors for comprehensive results
                 new_investors, new_search_results = await self._investor_service.find_investors(
                     sectors=sectors,
+                    location=location,
                     num_results=30,
                     enrich_profiles=True  # Enable LinkedIn enrichment
                 )
@@ -451,12 +463,14 @@ class ChatService:
 
     def _get_default_model(self, provider: str) -> str:
         """Get default model for a provider."""
-        defaults = {
-            "gemini": "gemini-pro",
-            "openai": "gpt-4",
-            "anthropic": "claude-3-sonnet-20240229"
-        }
-        return defaults.get(provider, "default")
+        provider = provider.lower()
+        if provider == "gemini":
+            return self._settings.gemini_model or "gemini-pro"
+        if provider == "openai":
+            return self._settings.openai_model or "gpt-4"
+        if provider == "anthropic":
+            return self._settings.anthropic_model or "claude-3-sonnet-20240229"
+        return "default"
 
     def _should_search_investors(self, message: str) -> bool:
         """Determine if the message requires investor search."""
@@ -481,6 +495,29 @@ class ChatService:
                 found_sectors.append(sector)
 
         return found_sectors if found_sectors else ["startup", "technology"]
+
+    def _extract_location(self, message: str) -> Optional[str]:
+        """Very lightweight location extraction from message."""
+        message_lower = message.lower()
+        # Common city/region hints
+        known_locations = [
+            "silicon valley", "san francisco", "bay area", "new york", "nyc",
+            "boston", "la", "los angeles", "chicago", "miami", "seattle",
+            "austin", "istanbul", "berlin", "london", "paris", "bengaluru",
+            "singapore", "dubai", "united states", "usa", "us"
+        ]
+        for loc in known_locations:
+            if loc in message_lower:
+                return loc.title() if len(loc.split()) > 1 else loc.upper()
+
+        # Regex patterns like "in <city>" or "from <city>"
+        match = re.search(r"(?:in|from|at)\s+([a-zA-Z\s]+)", message_lower)
+        if match:
+            candidate = match.group(1).strip()
+            if 2 <= len(candidate) <= 40:
+                return candidate.title()
+
+        return None
 
     @staticmethod
     def list_available_providers() -> Dict[str, List[str]]:
