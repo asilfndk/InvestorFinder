@@ -173,64 +173,37 @@ docker-compose down
 
 ## 🏗️ Architecture
 
+- **FastAPI backend**: Async-first API with SSE streaming for chat responses.
+- **Plugin providers**: Registry-driven LLM, search, and scraper providers with configurable fallback and cooldown handling.
+- **Event-driven core**: Pub/sub event bus plus protocol-based interfaces to keep components decoupled.
+- **Persistence**: SQLite by default via SQLAlchemy, plus Pydantic schemas and JSON conversation storage.
+
 ### Project Structure
 
 ```
 ai-investor-finder/
 ├── app/
-│   ├── core/                    # Core components
-│   │   ├── protocols.py         # Type-safe Protocol interfaces
-│   │   ├── providers.py         # Provider registry & factory
-│   │   ├── events.py            # Event bus (pub/sub)
-│   │   └── exceptions.py        # Custom exceptions
-│   │
-│   ├── database/                # Database layer
-│   │   ├── connection.py        # Async SQLAlchemy connection
-│   │   ├── models.py            # ORM models
-│   │   └── repositories.py      # Data access layer
-│   │
-│   ├── providers/               # Plugin-based providers
-│   │   ├── llm/                 # LLM providers
-│   │   │   ├── gemini.py        # Google Gemini
-│   │   │   ├── openai_provider.py
-│   │   │   └── anthropic.py     # Claude
-│   │   ├── search/              # Search providers
-│   │   │   └── google.py        # Google Custom Search
-│   │   └── scraper/             # Web scrapers
-│   │       └── linkedin.py      # LinkedIn scraper
-│   │
-│   ├── models/                  # Pydantic schemas
-│   │   └── schemas.py           # Request/Response models
-│   │
-│   ├── services/                # Business logic
-│   │   ├── chat_service.py      # Chat orchestration
-│   │   ├── investor_service.py  # Investor search
-│   │   └── memory_service.py    # Conversation memory
-│   │
-│   ├── routes/                  # API endpoints
-│   │   └── chat.py              # Chat API routes
-│   │
-│   ├── config.py                # Configuration
-│   └── main.py                  # FastAPI application
-│
-├── static/                      # Frontend assets
-│   └── index.html               # Chat UI
-│
-├── data/                        # Data storage (gitignored)
-│   ├── conversations/           # JSON conversation files
-│   └── investor_finder.db       # SQLite database
-│
-├── .env.example                 # Environment template
-├── requirements.txt             # Python dependencies
-└── README.md                    # This file
+│   ├── core/            # Protocols, provider registry, events, exceptions
+│   ├── database/        # Async SQLAlchemy setup, models, repositories
+│   ├── providers/       # LLM/search/scraper implementations
+│   ├── models/          # Pydantic request/response schemas
+│   ├── services/        # Chat + investor logic, memory handling
+│   ├── routes/          # FastAPI routers
+│   ├── config.py        # Settings loader
+│   └── main.py          # FastAPI entrypoint
+├── static/              # Chat UI
+├── data/                # Local storage (gitignored)
+├── .env.example
+├── requirements.txt
+└── README.md
 ```
 
 ### Behavior & Settings
 
-- **LLM fallback**: Order is configurable via `LLM_FALLBACK_ORDER`; failed providers are skipped for `PROVIDER_FAILURE_COOLDOWN_SECONDS`.
-- **Search & scraping**: Google Custom Search + LinkedIn scraping (UA rotation, jittered delays, optional proxy). `PLAYWRIGHT_ENABLED` defaults off.
-- **Rate limit**: SlowAPI with IP-based limit (`RATE_LIMIT_PER_MINUTE`).
-- **Pagination**: SSE returns 10 investors at a time; type “more” to paginate.
+- **LLM fallback**: Ordered via `LLM_FALLBACK_ORDER`; failed providers are skipped for `PROVIDER_FAILURE_COOLDOWN_SECONDS`.
+- **Search & scraping**: Google Custom Search plus LinkedIn scraping with UA rotation, jittered delays, and optional proxy; `PLAYWRIGHT_ENABLED` is off by default.
+- **Rate limiting**: SlowAPI IP-based throttling (`RATE_LIMIT_PER_MINUTE`).
+- **Streaming/pagination**: SSE delivers 10 investors at a time; send “more” to continue.
 
 ### Tests
 
