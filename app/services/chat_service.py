@@ -83,6 +83,8 @@ class ChatService:
         self._memory_service: MemoryService = get_memory_service()
         # Pagination state per conversation
         self._pagination_state: Dict[str, Dict[str, Any]] = {}
+        # Provider backoff tracking
+        self._provider_backoff: Dict[str, float] = {}
 
     async def initialize(self) -> None:
         """Initialize the chat service with default provider."""
@@ -118,21 +120,14 @@ class ChatService:
                   "conversation_id": conversation_id}
         ))
 
-        # Determine which LLM provider to use
-        provider_name = request.model_provider or self.default_llm_provider
-
-        # Get or create LLM provider
+        # Determine which LLM provider to use with fallback
         try:
-            if provider_name != self.default_llm_provider or not self._llm_provider:
-                config = LLMConfig(
-                    model_name=self._get_default_model(provider_name))
-                llm_provider = await get_llm(provider_name, config)
-            else:
-                llm_provider = self._llm_provider
+            llm_provider, provider_name = await self._get_llm_with_fallback(
+                request.model_provider)
         except Exception as e:
             logger.error(f"Failed to get LLM provider: {e}")
             return ChatResponse(
-                message=f"Sorry, failed to initialize the model provider: {str(e)}",
+                message=f"Sorry, failed to initialize any model provider: {str(e)}",
                 conversation_id=conversation_id
             )
 
@@ -266,15 +261,10 @@ class ChatService:
         # Check if user wants more investors (pagination)
         is_pagination_request = self._is_pagination_request(request.message)
 
-        # Get LLM provider
-        provider_name = request.model_provider or self.default_llm_provider
+        # Get LLM provider with fallback
         try:
-            if provider_name != self.default_llm_provider or not self._llm_provider:
-                config = LLMConfig(
-                    model_name=self._get_default_model(provider_name))
-                llm_provider = await get_llm(provider_name, config)
-            else:
-                llm_provider = self._llm_provider
+            llm_provider, provider_name = await self._get_llm_with_fallback(
+                request.model_provider)
         except Exception as e:
             logger.error(f"Failed to get LLM provider: {e}")
             yield {
@@ -471,6 +461,46 @@ class ChatService:
         if provider == "anthropic":
             return self._settings.anthropic_model or "claude-3-sonnet-20240229"
         return "default"
+
+    async def _get_llm_with_fallback(self, requested: Optional[str]):
+        """Try to get an LLM provider with fallback to other configured ones."""
+        # Build priority list from config
+        configured_order = [
+            p.strip() for p in self._settings.llm_fallback_order.split(",") if p.strip()]
+        providers = []
+        # requested first
+        if requested:
+            providers.append(requested)
+        # then config order
+        for p in configured_order:
+            if p not in providers:
+                providers.append(p)
+        # ensure default included
+        if self.default_llm_provider not in providers:
+            providers.append(self.default_llm_provider)
+        # add any remaining configured
+        for candidate in ["gemini", "openai", "anthropic"]:
+            if candidate not in providers and self._settings.is_provider_configured(candidate):
+                providers.append(candidate)
+
+        last_error = None
+        for provider in providers:
+            # skip providers in cooldown
+            backoff_until = self._provider_backoff.get(provider)
+            if backoff_until and backoff_until > time.time():
+                continue
+            try:
+                config = LLMConfig(model_name=self._get_default_model(provider))
+                llm_provider = await get_llm(provider, config)
+                return llm_provider, provider
+            except Exception as e:
+                last_error = e
+                logger.warning(f"Provider {provider} failed, trying next: {e}")
+                # backoff provider to avoid thrashing
+                self._provider_backoff[provider] = time.time(
+                ) + self._settings.provider_failure_cooldown_seconds
+
+        raise last_error or AppException(code="llm_unavailable", message="No LLM providers available")
 
     def _should_search_investors(self, message: str) -> bool:
         """Determine if the message requires investor search."""

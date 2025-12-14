@@ -8,9 +8,11 @@ import asyncio
 import re
 from typing import Optional, List
 import logging
+import random
 
 import httpx
 from bs4 import BeautifulSoup
+from playwright.async_api import async_playwright
 
 from app.core.providers import register
 from app.core.exceptions import ScraperError
@@ -29,13 +31,21 @@ class LinkedInScraperProvider:
 
     def __init__(self):
         self._settings = get_settings()
+        self._user_agents = [
+            "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36",
+            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36",
+            "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+            "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) Gecko/20100101 Firefox/123.0",
+        ]
         self._headers = {
-            "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+            "User-Agent": random.choice(self._user_agents),
             "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8",
-            "Accept-Language": "en-US,en;q=0.5",
+            "Accept-Language": "en-US,en;q=0.8,tr;q=0.6",
         }
         self._scraped_profiles_cache: dict = {}  # Cache for scraped profiles
         self._initialized = False
+        self._proxy = self._settings.linkedin_proxy
+        self._proxies = self._parse_proxy_list(self._settings.linkedin_proxies)
 
     @property
     def name(self) -> str:
@@ -63,8 +73,20 @@ class LinkedInScraperProvider:
     async def scrape_profile(self, url: str) -> Optional[InvestorProfile]:
         """Scrape a LinkedIn profile using httpx (no login required for basic info)."""
         try:
-            async with httpx.AsyncClient(follow_redirects=True) as client:
-                response = await client.get(url, headers=self._headers, timeout=15)
+            # rotate user agent each call
+            self._headers["User-Agent"] = random.choice(self._user_agents)
+            async with httpx.AsyncClient(
+                follow_redirects=True,
+                proxies=self._pick_proxy(),
+                timeout=self._settings.scraping_timeout
+            ) as client:
+                response = await client.get(url, headers=self._headers)
+
+                if response.status_code in (429, 999):
+                    logger.warning(
+                        f"LinkedIn rate limited ({response.status_code}) for {url}")
+                    await asyncio.sleep(random.uniform(self._settings.linkedin_min_delay, self._settings.linkedin_max_delay))
+                    return self._extract_from_url(url)
 
                 if response.status_code != 200:
                     logger.warning(
@@ -83,10 +105,20 @@ class LinkedInScraperProvider:
                     return InvestorProfile(**profile_data)
                 else:
                     # Fallback to URL parsing
-                    return self._extract_from_url(url)
+                    basic = self._extract_from_url(url)
+                    if basic:
+                        return basic
+                    if self._settings.playwright_enabled:
+                        return await self._scrape_with_playwright(url)
+                    return None
 
         except Exception as e:
             logger.error(f"LinkedIn scrape error for {url}: {e}")
+            if self._settings.playwright_enabled:
+                try:
+                    return await self._scrape_with_playwright(url)
+                except Exception as pe:
+                    logger.error(f"Playwright scrape error: {pe}")
             # Return basic info from URL
             return self._extract_from_url(url)
 
@@ -152,6 +184,12 @@ class LinkedInScraperProvider:
                 if h1:
                     data["name"] = h1.get_text(strip=True)[:100]
 
+            # Very simple block detection (captcha/login pages)
+            page_text = soup.get_text(" ", strip=True).lower()
+            if "captcha" in page_text or "verify" in page_text:
+                logger.warning("LinkedIn captcha detected, returning minimal data")
+                return None
+
             return data if data.get("name") else None
 
         except Exception as e:
@@ -201,6 +239,41 @@ class LinkedInScraperProvider:
                 found_focus.append(category)
 
         return found_focus[:5]  # Limit to 5
+
+    async def _scrape_with_playwright(self, url: str) -> Optional[InvestorProfile]:
+        """Fallback scraping using Playwright for tougher pages."""
+        proxy = self._pick_proxy()
+        launch_args = {"headless": self._settings.playwright_headless}
+        if proxy:
+            launch_args["proxy"] = {"server": proxy}
+
+        async with async_playwright() as p:
+            browser = await p.chromium.launch(**launch_args)
+            try:
+                page = await browser.new_page(user_agent=random.choice(self._user_agents))
+                await page.goto(url, wait_until="domcontentloaded", timeout=self._settings.scraping_timeout * 1000)
+                await page.wait_for_timeout(random.uniform(self._settings.linkedin_min_delay, self._settings.linkedin_max_delay) * 1000)
+                content = await page.content()
+                soup = BeautifulSoup(content, "html.parser")
+                data = self._parse_public_profile(soup, url)
+                if data and data.get("name"):
+                    data["linkedin_url"] = url
+                    data["source"] = "linkedin"
+                    return InvestorProfile(**data)
+                return self._extract_from_url(url)
+            finally:
+                await browser.close()
+
+    def _pick_proxy(self) -> Optional[str]:
+        """Select a proxy from list or single proxy."""
+        choices = self._proxies or ([self._proxy] if self._proxy else [])
+        return random.choice(choices) if choices else None
+
+    def _parse_proxy_list(self, proxies: Optional[str]) -> Optional[List[str]]:
+        if not proxies:
+            return None
+        parsed = [p.strip() for p in proxies.split(",") if p.strip()]
+        return parsed or None
 
     async def scrape_from_search_result(self, title: str, snippet: str, url: str) -> Optional[InvestorProfile]:
         """Create profile from Google search result about LinkedIn profile."""

@@ -3,12 +3,17 @@ Main FastAPI application with modular architecture.
 """
 
 import logging
+import uuid
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse, JSONResponse
+from slowapi import Limiter, _rate_limit_exceeded_handler
+from slowapi.util import get_remote_address
+from slowapi.middleware import SlowAPIMiddleware
+from slowapi.errors import RateLimitExceeded
 
 from app.config import get_settings
 from app.routes import chat_router
@@ -30,6 +35,12 @@ if settings.log_json:
     log_kwargs["format"] = '{"time":"%(asctime)s","level":"%(levelname)s","name":"%(name)s","message":"%(message)s"}'
 logging.basicConfig(**log_kwargs)
 logger = logging.getLogger(__name__)
+
+# Rate limiter
+limiter = Limiter(
+    key_func=get_remote_address,
+    default_limits=[f"{settings.rate_limit_per_minute}/minute"]
+)
 
 
 @asynccontextmanager
@@ -63,6 +74,9 @@ app = FastAPI(
     docs_url="/docs" if settings.debug else None,
     redoc_url="/redoc" if settings.debug else None,
 )
+app.state.limiter = limiter
+app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
+app.add_middleware(SlowAPIMiddleware)
 
 
 # Exception handler for custom exceptions
@@ -90,6 +104,16 @@ app.add_middleware(
 
 # Include routers
 app.include_router(chat_router)
+
+
+# Middleware to attach request ID for tracing
+@app.middleware("http")
+async def add_request_id(request: Request, call_next):
+    request_id = request.headers.get("X-Request-ID", str(uuid.uuid4()))
+    request.state.request_id = request_id
+    response = await call_next(request)
+    response.headers["X-Request-ID"] = request_id
+    return response
 
 
 # Serve static files

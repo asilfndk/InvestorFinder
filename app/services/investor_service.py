@@ -6,6 +6,7 @@ from typing import List, Tuple, Optional, Dict, Any
 import logging
 import asyncio
 import time
+import random
 
 from app.config import get_settings
 from app.core.providers import get_search, get_scraper
@@ -35,6 +36,8 @@ class InvestorService:
         self._current_page = 0
         self._page_size = 10
         self._scrape_delay = max(0.0, float(self._settings.linkedin_scrape_delay))
+        self._scrape_delay_min = max(0.0, float(self._settings.linkedin_min_delay))
+        self._scrape_delay_max = max(self._scrape_delay_min, float(self._settings.linkedin_max_delay))
         self._scrape_max_concurrency = max(1, int(self._settings.linkedin_max_concurrency))
         self._cache: Dict[str, Dict[str, Any]] = {}
 
@@ -292,8 +295,9 @@ class InvestorService:
                         logger.warning(f"Failed to enrich {inv.name}: {e}")
                         return idx, inv
                     finally:
-                        if self._scrape_delay:
-                            await asyncio.sleep(self._scrape_delay)
+                        # jittered delay to reduce scrape pattern detectability
+                        delay = random.uniform(self._scrape_delay_min, self._scrape_delay_max)
+                        await asyncio.sleep(delay)
 
             enriched_results = await asyncio.gather(
                 *(enrich_one(idx, inv) for idx, inv in to_enrich)

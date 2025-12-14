@@ -79,6 +79,12 @@ class Settings(BaseSettings):
     linkedin_max_concurrency: int = Field(
         default=3, env="LINKEDIN_MAX_CONCURRENCY")
     scraping_timeout: int = Field(default=30, env="SCRAPING_TIMEOUT")
+    linkedin_min_delay: float = Field(default=1.5, env="LINKEDIN_MIN_DELAY")
+    linkedin_max_delay: float = Field(default=4.0, env="LINKEDIN_MAX_DELAY")
+    linkedin_proxy: Optional[str] = Field(default=None, env="LINKEDIN_PROXY")
+    linkedin_proxies: Optional[str] = Field(default=None, env="LINKEDIN_PROXIES")  # comma-separated
+    playwright_enabled: bool = Field(default=False, env="PLAYWRIGHT_ENABLED")
+    playwright_headless: bool = Field(default=True, env="PLAYWRIGHT_HEADLESS")
 
     # Logging
     log_level: str = Field(default="INFO", env="LOG_LEVEL")
@@ -87,6 +93,10 @@ class Settings(BaseSettings):
         env="LOG_FORMAT"
     )
     log_json: bool = Field(default=False, env="LOG_JSON")
+    llm_fallback_order: str = Field(
+        default="gemini,openai,anthropic", env="LLM_FALLBACK_ORDER")
+    provider_failure_cooldown_seconds: int = Field(
+        default=300, env="PROVIDER_FAILURE_COOLDOWN_SECONDS")
 
     # Memory & Persistence
     memory_persistence_enabled: bool = Field(
