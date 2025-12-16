@@ -16,7 +16,7 @@ from slowapi.middleware import SlowAPIMiddleware
 from slowapi.errors import RateLimitExceeded
 
 from app.config import get_settings
-from app.routes import chat_router, export_router
+from app.routes import chat_router, export_router, auth_router
 from app.core.providers import registry
 from app.core.exceptions import AppException
 from app.database import init_db, close_db
@@ -105,6 +105,7 @@ app.add_middleware(
 # Include routers (v1 API)
 app.include_router(chat_router)
 app.include_router(export_router)
+app.include_router(auth_router)
 
 
 # Legacy API redirect middleware for backward compatibility

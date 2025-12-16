@@ -40,6 +40,15 @@ class Settings(BaseSettings):
         description="Comma-separated origins for CORS (use * for all)"
     )
 
+    # Authentication (JWT)
+    jwt_secret_key: str = Field(
+        default="dev-secret-key-change-in-production",
+        env="JWT_SECRET_KEY",
+        description="Secret key for JWT token signing"
+    )
+    jwt_algorithm: str = Field(default="HS256", env="JWT_ALGORITHM")
+    jwt_expire_minutes: int = Field(default=60, env="JWT_EXPIRE_MINUTES")
+
     # LLM Providers
     # Gemini
     gemini_api_key: str = Field(default="", env="GEMINI_API_KEY")
@@ -82,7 +91,8 @@ class Settings(BaseSettings):
     linkedin_min_delay: float = Field(default=1.5, env="LINKEDIN_MIN_DELAY")
     linkedin_max_delay: float = Field(default=4.0, env="LINKEDIN_MAX_DELAY")
     linkedin_proxy: Optional[str] = Field(default=None, env="LINKEDIN_PROXY")
-    linkedin_proxies: Optional[str] = Field(default=None, env="LINKEDIN_PROXIES")  # comma-separated
+    linkedin_proxies: Optional[str] = Field(
+        default=None, env="LINKEDIN_PROXIES")  # comma-separated
     playwright_enabled: bool = Field(default=False, env="PLAYWRIGHT_ENABLED")
     playwright_headless: bool = Field(default=True, env="PLAYWRIGHT_HEADLESS")
 

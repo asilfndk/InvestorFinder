@@ -23,7 +23,8 @@ from app.database.models import (
     ConversationInvestor,
     SearchResultRecord,
     UserSession,
-    ProviderUsage
+    ProviderUsage,
+    User
 )
 
 from app.database.repositories import (
