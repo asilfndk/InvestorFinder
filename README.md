@@ -5,7 +5,7 @@
 ![Python](https://img.shields.io/badge/Python-3.11+-blue.svg)
 ![FastAPI](https://img.shields.io/badge/FastAPI-0.104+-green.svg)
 ![License](https://img.shields.io/badge/License-MIT-yellow.svg)
-![Tests](https://img.shields.io/badge/Tests-67%20passed-success.svg)
+![Tests](https://img.shields.io/badge/Tests-76%20passed-success.svg)
 ![Docker](https://img.shields.io/badge/Docker-Ready-blue.svg)
 
 **An AI-powered chatbot that helps entrepreneurs discover and connect with the right investors for their startups.**
@@ -46,7 +46,8 @@ Finding the right investor is one of the biggest challenges for startups. This t
 | 📥 **CSV/Excel Export** | Export investor lists for offline use |
 | 💾 **Conversation Memory** | SQLite-based persistent storage |
 | 🔌 **Plugin Architecture** | Easily add new providers |
-| 🧪 **Test Coverage** | 67+ unit and integration tests |
+| 🔐 **JWT Authentication** | Secure user registration and login |
+| 🧪 **Test Coverage** | 76+ unit and integration tests |
 
 ### Technical Highlights
 
@@ -107,6 +108,9 @@ DEFAULT_LLM_PROVIDER=gemini
 # Search (Google Custom Search)
 GOOGLE_SEARCH_API_KEY=your_google_search_api_key
 GOOGLE_SEARCH_ENGINE_ID=your_search_engine_id
+
+# Authentication (JWT)
+JWT_SECRET_KEY=your_jwt_secret_key  # Generate with: python3 -c "import secrets; print(secrets.token_hex(32))"
 ```
 
 ### Running the Application
@@ -207,6 +211,15 @@ GET /api/v1/export/{conversation_id}/excel
 | `/api/v1/conversation/{id}` | GET | Get conversation details |
 | `/api/v1/conversation/{id}` | DELETE | Delete a conversation |
 
+### Authentication Endpoints
+
+| Endpoint | Method | Description |
+|----------|--------|-------------|
+| `/api/v1/auth/register` | POST | Register a new user |
+| `/api/v1/auth/login` | POST | Login (returns JWT token) |
+| `/api/v1/auth/me` | GET | Get current user (requires token) |
+| `/api/v1/auth/refresh` | POST | Refresh token (requires token) |
+
 ---
 
 ## 🧪 Testing
@@ -229,9 +242,10 @@ pytest tests/ -v --cov=app --cov-report=term-missing
 | `test_investor_service.py` | 8 | Cache key generation, pagination |
 | `test_memory_service.py` | 19 | Conversation context, serialization |
 | `test_routes.py` | 12 | API endpoint validations |
+| `test_auth.py` | 9 | Authentication endpoints |
 | `test_health.py` | 1 | Health check |
 
-**Total: 67 tests ✅**
+**Total: 76 tests ✅**
 
 ---
 
