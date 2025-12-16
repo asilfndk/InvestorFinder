@@ -145,13 +145,29 @@
               <i class="fas fa-users mr-2"></i>
               Found Investors
             </h2>
-            <button
-              id="clearConversation"
-              class="px-3 py-1 bg-white/20 hover:bg-white/30 rounded-lg text-sm transition-colors"
-              title="Reset Conversation"
-            >
-              <i class="fas fa-trash-alt mr-1"></i> Reset
-            </button>
+            <div class="flex items-center space-x-2">
+              <button
+                id="exportCSV"
+                class="px-3 py-1 bg-white/20 hover:bg-white/30 rounded-lg text-sm transition-colors hidden"
+                title="Export to CSV"
+              >
+                <i class="fas fa-file-csv mr-1"></i> CSV
+              </button>
+              <button
+                id="exportExcel"
+                class="px-3 py-1 bg-white/20 hover:bg-white/30 rounded-lg text-sm transition-colors hidden"
+                title="Export to Excel"
+              >
+                <i class="fas fa-file-excel mr-1"></i> Excel
+              </button>
+              <button
+                id="clearConversation"
+                class="px-3 py-1 bg-white/20 hover:bg-white/30 rounded-lg text-sm transition-colors"
+                title="Reset Conversation"
+              >
+                <i class="fas fa-trash-alt mr-1"></i> Reset
+              </button>
+            </div>
           </div>
         </div>
 
@@ -221,6 +237,30 @@
       const loadMoreBtn = document.getElementById("loadMoreBtn");
       const loadMoreText = document.getElementById("loadMoreText");
       const remainingInfo = document.getElementById("remainingInfo");
+      const exportCSVBtn = document.getElementById("exportCSV");
+      const exportExcelBtn = document.getElementById("exportExcel");
+
+      // Export handlers
+      exportCSVBtn.addEventListener("click", async () => {
+        if (!conversationId) return;
+        window.location.href = `/api/v1/export/${conversationId}/csv`;
+      });
+
+      exportExcelBtn.addEventListener("click", async () => {
+        if (!conversationId) return;
+        window.location.href = `/api/v1/export/${conversationId}/excel`;
+      });
+
+      // Show/hide export buttons based on conversation state
+      function updateExportButtons(show) {
+        if (show && conversationId && allDisplayedInvestors.length > 0) {
+          exportCSVBtn.classList.remove("hidden");
+          exportExcelBtn.classList.remove("hidden");
+        } else {
+          exportCSVBtn.classList.add("hidden");
+          exportExcelBtn.classList.add("hidden");
+        }
+      }
 
       // Update conversation summary with pagination info
       function updateSummary(
@@ -254,6 +294,9 @@
           } else {
             loadMoreContainer.classList.add("hidden");
           }
+
+          // Show export buttons
+          updateExportButtons(true);
         }
       }
 
@@ -286,6 +329,7 @@
         allDisplayedInvestors = [];
         summaryDiv.classList.add("hidden");
         loadMoreContainer.classList.add("hidden");
+        updateExportButtons(false);
         investorsList.innerHTML = `
           <div class="text-center text-gray-500 py-8">
             <i class="fas fa-search text-4xl mb-3 text-gray-300"></i>

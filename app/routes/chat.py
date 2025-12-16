@@ -24,7 +24,7 @@ from app.config import get_settings
 
 logger = logging.getLogger(__name__)
 
-router = APIRouter(prefix="/api", tags=["chat"])
+router = APIRouter(prefix="/api/v1", tags=["chat"])
 
 # Service instances (will be properly initialized via dependency injection)
 _chat_service: ChatService = None
@@ -201,7 +201,8 @@ async def list_providers():
         if settings.is_provider_configured(provider)
     ]
     search_ready = {
-        provider: bool(settings.google_search_api_key and settings.google_search_engine_id)
+        provider: bool(
+            settings.google_search_api_key and settings.google_search_engine_id)
         for provider in search_providers
     }
     scraper_ready = {provider: True for provider in scraper_providers}
@@ -226,7 +227,8 @@ async def health_check():
 
     # Check LLM providers
     for provider in registry.list_providers("llm"):
-        providers_status[f"llm.{provider}"] = settings.is_provider_configured(provider)
+        providers_status[f"llm.{provider}"] = settings.is_provider_configured(
+            provider)
 
     # Check search providers
     for provider in registry.list_providers("search"):

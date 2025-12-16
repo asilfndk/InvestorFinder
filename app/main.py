@@ -16,7 +16,7 @@ from slowapi.middleware import SlowAPIMiddleware
 from slowapi.errors import RateLimitExceeded
 
 from app.config import get_settings
-from app.routes import chat_router
+from app.routes import chat_router, export_router
 from app.core.providers import registry
 from app.core.exceptions import AppException
 from app.database import init_db, close_db
@@ -102,8 +102,28 @@ app.add_middleware(
 )
 
 
-# Include routers
+# Include routers (v1 API)
 app.include_router(chat_router)
+app.include_router(export_router)
+
+
+# Legacy API redirect middleware for backward compatibility
+@app.middleware("http")
+async def legacy_api_redirect(request: Request, call_next):
+    """
+    Redirect /api/* requests to /api/v1/* for backward compatibility.
+    Excludes /api/v1/* requests from redirection.
+    """
+    path = request.url.path
+
+    # If path starts with /api/ but NOT /api/v1/, redirect to v1
+    if path.startswith("/api/") and not path.startswith("/api/v1/"):
+        # Rewrite the path to include v1
+        new_path = path.replace("/api/", "/api/v1/", 1)
+        # Create new scope with updated path
+        request.scope["path"] = new_path
+
+    return await call_next(request)
 
 
 # Middleware to attach request ID for tracing

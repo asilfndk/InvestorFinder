@@ -2,494 +2,307 @@
 
 <div align="center">
 
-![Python](https://img.shields.io/badge/Python-3.10+-blue.svg)
-![FastAPI](https://img.shields.io/badge/FastAPI-0.100+-green.svg)
+![Python](https://img.shields.io/badge/Python-3.11+-blue.svg)
+![FastAPI](https://img.shields.io/badge/FastAPI-0.104+-green.svg)
 ![License](https://img.shields.io/badge/License-MIT-yellow.svg)
-![Status](https://img.shields.io/badge/Status-Active-success.svg)
+![Tests](https://img.shields.io/badge/Tests-67%20passed-success.svg)
+![Docker](https://img.shields.io/badge/Docker-Ready-blue.svg)
 
-**An AI-powered chatbot that helps entrepreneurs discover and connect with the right investors for their startups.**
+**AI destekli chatbot ile startup'ınız için doğru yatırımcıları bulun.**
 
-[Features](#-features) • [Quick Start](#-quick-start) • [Architecture](#-architecture) • [API](#-api-reference) • [Contributing](#-contributing)
+[Özellikler](#-özellikler) • [Hızlı Başlangıç](#-hızlı-başlangıç) • [API](#-api-referansı) • [Docker](#-docker) • [Test](#-test)
 
 </div>
 
 ---
 
-## 📋 Overview
+## 📋 Genel Bakış
 
-AI Startup Investor Finder is an intelligent chatbot application that leverages AI to help entrepreneurs find suitable investors based on their startup's sector, stage, and location preferences. The system searches for US-based investors (Silicon Valley, NYC, Boston, etc.) and provides detailed profiles with contact information.
+AI Startup Investor Finder, girişimcilerin sektör, aşama ve konum tercihlerine göre uygun yatırımcıları bulmalarına yardımcı olan akıllı bir chatbot uygulamasıdır. Sistem, ABD merkezli yatırımcıları (Silicon Valley, NYC, Boston vb.) arar ve iletişim bilgileriyle detaylı profiller sunar.
 
-### Why This Project?
+### Neden Bu Proje?
 
-Finding the right investor is one of the biggest challenges for startups. This tool automates the research process by:
+Doğru yatırımcıyı bulmak startup'lar için en büyük zorluklardan biridir. Bu araç araştırma sürecini otomatikleştirerek:
 
-- 🔍 **Intelligent Search**: Uses Google Custom Search to find relevant investor profiles
-- 🤖 **AI-Powered Analysis**: Leverages Gemini/OpenAI to understand your needs and match investors
-- 📊 **Rich Profiles**: Scrapes LinkedIn for detailed investor information
-- 💬 **Conversational UI**: Natural chat interface for easy interaction
-- 💾 **Persistent Memory**: Remembers conversation context for better recommendations
-
----
-
-## ✨ Features
-
-### Core Features
-
-| Feature | Description |
-|---------|-------------|
-| 🤖 **Multi-LLM Support** | Google Gemini (default), OpenAI GPT-4, Anthropic Claude |
-| 🔍 **Smart Search** | Google Custom Search API integration |
-| 👤 **LinkedIn Scraping** | Extract investor profiles and details |
-| 💬 **Streaming Responses** | Real-time AI responses with SSE |
-| 📧 **Email Extraction** | Find investor contact information |
-| 💾 **Conversation Memory** | SQLite-based persistent storage |
-| 🔌 **Plugin Architecture** | Easily add new providers |
-
-### Technical Highlights
-
-- **Protocol-based Design**: Type-safe interfaces using Python Protocols
-- **Async-first**: All I/O operations are asynchronous
-- **Event-driven**: Pub/sub pattern for decoupled communication
-- **Database Storage**: SQLAlchemy with SQLite/PostgreSQL support
-- **Modern Python**: Type hints, dataclasses, and async/await
+- 🔍 **Akıllı Arama**: Google Custom Search ile ilgili yatırımcı profillerini bulur
+- 🤖 **AI Destekli Analiz**: Gemini/OpenAI ile ihtiyaçlarınızı anlar ve yatırımcıları eşleştirir
+- 📊 **Zengin Profiller**: LinkedIn'den detaylı yatırımcı bilgilerini çeker
+- 💬 **Konuşma Arayüzü**: Kolay etkileşim için doğal sohbet arayüzü
+- 📥 **Export Desteği**: Bulunan yatırımcıları CSV/Excel olarak indirin
+- 💾 **Kalıcı Hafıza**: Daha iyi öneriler için konuşma bağlamını hatırlar
 
 ---
 
-## 🚀 Quick Start
+## ✨ Özellikler
 
-### Prerequisites
+### Temel Özellikler
 
-- Python 3.10 or higher
-- Google Gemini API Key ([Get it here](https://makersuite.google.com/app/apikey))
-- Google Custom Search API Key (optional, for better results)
+| Özellik | Açıklama |
+|---------|----------|
+| 🤖 **Çoklu LLM Desteği** | Google Gemini (varsayılan), OpenAI GPT-4, Anthropic Claude |
+| 🔍 **Akıllı Arama** | Google Custom Search API entegrasyonu |
+| 👤 **LinkedIn Scraping** | Yatırımcı profilleri ve detaylarını çıkarma |
+| 💬 **Streaming Yanıtlar** | SSE ile gerçek zamanlı AI yanıtları |
+| 📥 **CSV/Excel Export** | Yatırımcı listelerini dışa aktarma |
+| 💾 **Konuşma Hafızası** | SQLite tabanlı kalıcı depolama |
+| 🔌 **Plugin Mimarisi** | Kolayca yeni provider'lar ekleme |
+| 🧪 **Test Coverage** | 67+ unit ve integration test |
 
-### Installation
+### Teknik Özellikler
+
+- **API Versioning**: `/api/v1/` prefix ile versiyonlu API
+- **Protocol-based Design**: Python Protocols ile tip güvenli arayüzler
+- **Async-first**: Tüm I/O işlemleri asenkron
+- **Event-driven**: Pub/sub pattern ile bileşenler arası iletişim
+- **Database**: SQLAlchemy ile SQLite/PostgreSQL desteği
+
+---
+
+## 🚀 Hızlı Başlangıç
+
+### Gereksinimler
+
+- Python 3.10+
+- Google Gemini API Key ([Buradan alın](https://makersuite.google.com/app/apikey))
+- Google Custom Search API Key (isteğe bağlı)
+
+### Kurulum
 
 ```bash
-# Clone the repository
-git clone https://github.com/asilfndk/ai-investor-finder.git
-cd ai-investor-finder
+# Repository'yi klonlayın
+git clone https://github.com/asilfndk/InvestorFinder.git
+cd InvestorFinder
 
-# Create virtual environment
+# Virtual environment oluşturun
 python -m venv .venv
 source .venv/bin/activate  # macOS/Linux
-# or
+# veya
 .\.venv\Scripts\activate  # Windows
 
-# Install dependencies
+# Bağımlılıkları yükleyin
 pip install -r requirements.txt
-
-# Install Playwright browsers (for advanced scraping)
-playwright install chromium
 ```
 
-### Configuration
+### Yapılandırma
 
 ```bash
-# Copy environment template
+# Environment dosyasını kopyalayın
 cp .env.example .env
 
-# Edit .env with your API keys
-nano .env  # or use your preferred editor
+# .env dosyasını düzenleyin
+nano .env
 ```
 
-**Environment Variables (key ones):**
+**Temel Environment Değişkenleri:**
 
 ```env
-# Required for Gemini (default)
-GEMINI_API_KEY=your_gemini_api_key_here
+# Zorunlu (Gemini için)
+GEMINI_API_KEY=your_gemini_api_key
 
-# Optional LLMs
-OPENAI_API_KEY=your_openai_api_key_here
-ANTHROPIC_API_KEY=your_anthropic_api_key_here
-DEFAULT_LLM_PROVIDER=gemini  # gemini | openai | anthropic
+# İsteğe Bağlı LLM'ler
+OPENAI_API_KEY=your_openai_api_key
+ANTHROPIC_API_KEY=your_anthropic_api_key
+DEFAULT_LLM_PROVIDER=gemini
 
 # Search (Google Custom Search)
 GOOGLE_SEARCH_API_KEY=your_google_search_api_key
 GOOGLE_SEARCH_ENGINE_ID=your_search_engine_id
-
-# CORS & logging
-ALLOWED_ORIGINS=http://localhost:8000,http://127.0.0.1:8000
-LOG_JSON=false
-
-# LLM fallback & provider cooldown
-LLM_FALLBACK_ORDER=gemini,openai,anthropic
-PROVIDER_FAILURE_COOLDOWN_SECONDS=300
-
-# Scraping
-LINKEDIN_SCRAPE_DELAY=0.2
-LINKEDIN_MAX_CONCURRENCY=3
-LINKEDIN_MIN_DELAY=1.5
-LINKEDIN_MAX_DELAY=4.0
-LINKEDIN_PROXY=
-LINKEDIN_PROXIES=
-PLAYWRIGHT_ENABLED=false
-PLAYWRIGHT_HEADLESS=true
-
-# Search behavior
-SEARCH_TIMEOUT_SECONDS=15
-SEARCH_MAX_RETRIES=2
-SEARCH_CACHE_TTL_MINUTES=20
 ```
 
-### Running the Application
+### Uygulamayı Çalıştırma
 
 ```bash
-# Development mode (with auto-reload)
+# Development modu (auto-reload ile)
 uvicorn app.main:app --reload --port 8000
 
-# Production mode
+# Production modu
 uvicorn app.main:app --host 0.0.0.0 --port 8000
 ```
 
-Open http://localhost:8000 in your browser.
+Tarayıcınızda **http://localhost:8000** adresini açın.
 
-### 🐳 Docker
+---
+
+## 🐳 Docker
+
+### Docker Compose ile Çalıştırma
 
 ```bash
-# Build and run with Docker Compose
-docker-compose up -d
+# Build ve başlatma
+docker-compose up -d --build
 
-# Or build manually
+# Logları görüntüleme
+docker-compose logs -f
+
+# Durdurma
+docker-compose down
+```
+
+### Manuel Docker Build
+
+```bash
 docker build -t ai-investor-finder .
 docker run -d -p 8000:8000 \
   -e GEMINI_API_KEY=your_key \
   -e GOOGLE_SEARCH_API_KEY=your_key \
   -e GOOGLE_SEARCH_ENGINE_ID=your_cx \
-  -e DEFAULT_LLM_PROVIDER=gemini \
   ai-investor-finder
 ```
 
-> Not: `docker-compose` `.env` dosyasındaki değişkenleri otomatik okur (GEMINI/OPENAI/ANTHROPIC ve Google arama, scrape, log ayarları).
-
-# View logs
-docker-compose logs -f
-
-# Stop
-docker-compose down
-```
+> **Not:** `docker-compose`, `.env` dosyasındaki değişkenleri otomatik okur.
 
 ---
 
-## 🏗️ Architecture
+## 📡 API Referansı
 
-- **FastAPI backend**: Async-first API with SSE streaming for chat responses.
-- **Plugin providers**: Registry-driven LLM, search, and scraper providers with configurable fallback and cooldown handling.
-- **Event-driven core**: Pub/sub event bus plus protocol-based interfaces to keep components decoupled.
-- **Persistence**: SQLite by default via SQLAlchemy, plus Pydantic schemas and JSON conversation storage.
+### Base URL
 
-### Project Structure
+Tüm API endpoint'leri `/api/v1/` prefix'i kullanır. Eski `/api/` URL'leri backward compatibility için otomatik yönlendirilir.
 
-```
-ai-investor-finder/
-├── app/
-│   ├── core/            # Protocols, provider registry, events, exceptions
-│   ├── database/        # Async SQLAlchemy setup, models, repositories
-│   ├── providers/       # LLM/search/scraper implementations
-│   ├── models/          # Pydantic request/response schemas
-│   ├── services/        # Chat + investor logic, memory handling
-│   ├── routes/          # FastAPI routers
-│   ├── config.py        # Settings loader
-│   └── main.py          # FastAPI entrypoint
-├── static/              # Chat UI
-├── data/                # Local storage (gitignored)
-├── .env.example
-├── requirements.txt
-└── README.md
-```
-
-### Behavior & Settings
-
-- **LLM fallback**: Ordered via `LLM_FALLBACK_ORDER`; failed providers are skipped for `PROVIDER_FAILURE_COOLDOWN_SECONDS`.
-- **Search & scraping**: Google Custom Search plus LinkedIn scraping with UA rotation, jittered delays, and optional proxy; `PLAYWRIGHT_ENABLED` is off by default.
-- **Rate limiting**: SlowAPI IP-based throttling (`RATE_LIMIT_PER_MINUTE`).
-- **Streaming/pagination**: SSE delivers 10 investors at a time; send “more” to continue.
-
-### Tests
-
-```bash
-pytest tests/test_health.py
-```
-
-### Provider System
-
-The application uses a plugin architecture that makes it easy to add new providers:
-
-```python
-from app.core.protocols import LLMProvider, ProviderMixin
-from app.core.providers import register
-
-@register("llm", "my_provider")
-class MyLLMProvider(ProviderMixin):
-    """Custom LLM provider."""
-    
-    async def initialize(self) -> None:
-        # Setup API client
-        pass
-    
-    async def generate_response(self, messages: list, context: str | None = None) -> str:
-        # Generate response
-        pass
-    
-    async def generate_stream(self, messages: list, context: str | None = None):
-        # Stream response chunks
-        yield "chunk"
-    
-    async def cleanup(self) -> None:
-        # Cleanup resources
-        pass
-```
-
-### Database Schema
-
-```
-┌─────────────────┐     ┌─────────────────┐
-│  conversations  │────<│    messages     │
-├─────────────────┤     ├─────────────────┤
-│ id (PK)         │     │ id (PK)         │
-│ title           │     │ conversation_id │
-│ created_at      │     │ role            │
-│ updated_at      │     │ content         │
-│ metadata        │     │ timestamp       │
-└─────────────────┘     └─────────────────┘
-         │
-         │              ┌─────────────────┐
-         └─────────────<│    investors    │
-                        ├─────────────────┤
-                        │ id (PK)         │
-                        │ name            │
-                        │ title           │
-                        │ company         │
-                        │ linkedin_url    │
-                        │ sectors         │
-                        │ location        │
-                        └─────────────────┘
-```
-
----
-
-## 📡 API Reference
-
-### Chat Endpoints
+### Chat Endpoint'leri
 
 #### Stream Chat Response
-
 ```http
-POST /api/chat/stream
+POST /api/v1/chat/stream
 Content-Type: application/json
 
 {
-  "message": "Find AI investors in Silicon Valley",
+  "message": "AI alanında Silicon Valley yatırımcıları bul",
   "conversation_id": "optional-uuid",
   "model_provider": "gemini"
 }
 ```
 
-**Response**: Server-Sent Events (SSE) stream
+**Response:** Server-Sent Events (SSE) stream
 
-Quick SSE example in JavaScript:
-
-```js
-const res = await fetch("/api/chat/stream", {
-  method: "POST",
-  headers: { "Content-Type": "application/json" },
-  body: JSON.stringify({
-    message: "Find AI investors in Silicon Valley",
-    model_provider: "gemini" // or "openai"
-  })
-});
-
-const reader = res.body.getReader();
-const decoder = new TextDecoder();
-let buffer = "";
-
-while (true) {
-  const { value, done } = await reader.read();
-  if (done) break;
-  buffer += decoder.decode(value, { stream: true });
-  for (const block of buffer.split("\n\n")) {
-    if (!block.startsWith("data: ")) continue;
-    const payload = JSON.parse(block.slice(6));
-    console.log(payload.type, payload);
-  }
-  buffer = "";
-}
-```
-
-#### Regular Chat Response
-
+#### Regular Chat
 ```http
-POST /api/chat
+POST /api/v1/chat
 Content-Type: application/json
 
 {
-  "message": "Tell me about healthcare VCs",
+  "message": "Healthcare VC'leri hakkında bilgi ver",
   "model_provider": "gemini"
 }
 ```
 
-### Provider Endpoints
-
-#### List Available Providers
+### Export Endpoint'leri
 
 ```http
-GET /api/providers
+# Konuşmadaki yatırımcıları CSV olarak indir
+GET /api/v1/export/{conversation_id}/csv
+
+# Konuşmadaki yatırımcıları Excel olarak indir
+GET /api/v1/export/{conversation_id}/excel
 ```
 
-**Response**:
-```json
-{
-  "llm": ["gemini", "openai", "anthropic"],
-  "search": ["google"],
-  "scraper": ["linkedin"]
-}
-```
+### Diğer Endpoint'ler
 
-### Conversation Endpoints
-
-#### Get Conversation History
-
-```http
-GET /api/conversations/{conversation_id}
-```
-
-#### List All Conversations
-
-```http
-GET /api/conversations
-```
+| Endpoint | Method | Açıklama |
+|----------|--------|----------|
+| `/health` | GET | Health check |
+| `/info` | GET | Uygulama bilgisi |
+| `/api/v1/providers` | GET | Mevcut provider'ları listele |
+| `/api/v1/conversations` | GET | Tüm konuşmaları listele |
+| `/api/v1/conversation/{id}` | GET | Konuşma detayları |
+| `/api/v1/conversation/{id}` | DELETE | Konuşmayı sil |
 
 ---
 
-## 🔧 Configuration
+## 🧪 Test
 
-### Environment Variables
-
-| Variable | Required | Default | Description |
-|----------|----------|---------|-------------|
-| `GEMINI_API_KEY` | Yes | - | Google Gemini API key |
-| `OPENAI_API_KEY` | No | - | OpenAI API key |
-| `GOOGLE_SEARCH_API_KEY` | No | - | Google Custom Search key |
-| `GOOGLE_SEARCH_ENGINE_ID` | No | - | Search Engine ID |
-| `DEFAULT_LLM_PROVIDER` | No | `gemini` | Default LLM provider |
-| `DEBUG` | No | `false` | Enable debug mode |
-| `LOG_LEVEL` | No | `INFO` | Logging level |
-| `LINKEDIN_SCRAPE_DELAY` | No | `2` | Delay between scrapes (seconds) |
-
-### Adding a New LLM Provider
-
-1. Create a new file in `app/providers/llm/`:
-
-```python
-# app/providers/llm/anthropic.py
-from app.core.protocols import LLMProvider, ProviderMixin
-from app.core.providers import register
-
-@register("llm", "anthropic")
-class AnthropicProvider(ProviderMixin):
-    async def initialize(self) -> None:
-        import anthropic
-        self.client = anthropic.AsyncClient()
-    
-    async def generate_response(self, messages, context=None) -> str:
-        response = await self.client.messages.create(
-            model="claude-3-sonnet-20240229",
-            messages=messages
-        )
-        return response.content[0].text
-    
-    async def generate_stream(self, messages, context=None):
-        async with self.client.messages.stream(...) as stream:
-            async for text in stream.text_stream:
-                yield text
-    
-    async def cleanup(self) -> None:
-        pass
-```
-
-2. Import in `app/providers/llm/__init__.py`:
-
-```python
-from .anthropic import AnthropicProvider
-```
-
-3. Add API key to `.env`:
-
-```env
-ANTHROPIC_API_KEY=your_key_here
-```
-
----
-
-## 🧪 Development
-
-### Running Tests
+### Testleri Çalıştırma
 
 ```bash
-# Install test dependencies
-pip install pytest pytest-asyncio pytest-cov
+# Tüm testleri çalıştır
+pytest tests/ -v
 
-# Run tests
-pytest tests/
-
-# With coverage
-pytest --cov=app tests/
+# Coverage ile çalıştır
+pytest tests/ -v --cov=app --cov-report=term-missing
 ```
 
-### Code Quality
+### Test Coverage
 
-```bash
-# Format code
-black app/
+| Test Dosyası | Test Sayısı | Açıklama |
+|--------------|-------------|----------|
+| `test_chat_service.py` | 18 | Sector extraction, search triggers, pagination |
+| `test_investor_service.py` | 8 | Cache key, pagination |
+| `test_memory_service.py` | 19 | Conversation context, serialization |
+| `test_routes.py` | 12 | API endpoint validations |
+| `test_health.py` | 1 | Health check |
 
-# Sort imports
-isort app/
+**Toplam: 67 test ✅**
 
-# Type checking
-mypy app/
+---
 
-# Lint
-ruff check app/
+## 🏗️ Proje Yapısı
+
+```
+InvestorFinder/
+├── app/
+│   ├── core/            # Protocols, provider registry, events
+│   ├── database/        # SQLAlchemy models, repositories
+│   ├── providers/       # LLM/search/scraper implementations
+│   │   ├── llm/         # Gemini, OpenAI, Anthropic
+│   │   ├── search/      # Google Search
+│   │   └── scraper/     # LinkedIn scraper
+│   ├── models/          # Pydantic schemas
+│   ├── services/        # Business logic
+│   ├── routes/          # FastAPI routers
+│   │   ├── chat.py      # Chat endpoints
+│   │   └── export.py    # Export endpoints
+│   ├── config.py        # Settings
+│   └── main.py          # FastAPI app
+├── static/              # Frontend UI
+├── tests/               # Unit & integration tests
+├── data/                # Local storage (gitignored)
+├── Dockerfile
+├── docker-compose.yml
+├── requirements.txt
+└── README.md
 ```
 
 ---
 
-## 🤝 Contributing
+## 🔧 Yapılandırma Seçenekleri
 
-Contributions are welcome! Please feel free to submit a Pull Request.
-
-1. Fork the repository
-2. Create your feature branch (`git checkout -b feature/AmazingFeature`)
-3. Commit your changes (`git commit -m 'Add some AmazingFeature'`)
-4. Push to the branch (`git push origin feature/AmazingFeature`)
-5. Open a Pull Request
-
-### Development Guidelines
-
-- Follow PEP 8 style guide
-- Add type hints to all functions
-- Write docstrings for public APIs
-- Include tests for new features
-- Update documentation as needed
+| Değişken | Varsayılan | Açıklama |
+|----------|------------|----------|
+| `GEMINI_API_KEY` | - | Google Gemini API key (zorunlu) |
+| `OPENAI_API_KEY` | - | OpenAI API key |
+| `ANTHROPIC_API_KEY` | - | Anthropic API key |
+| `DEFAULT_LLM_PROVIDER` | `gemini` | Varsayılan LLM provider |
+| `GOOGLE_SEARCH_API_KEY` | - | Google Custom Search key |
+| `GOOGLE_SEARCH_ENGINE_ID` | - | Search Engine ID |
+| `RATE_LIMIT_PER_MINUTE` | `30` | Dakika başına rate limit |
+| `DEBUG` | `true` | Debug modu |
 
 ---
 
-## ⚠️ Important Notes
+## 🤝 Katkıda Bulunma
 
-1. **API Keys**: Never commit your `.env` file
-2. **LinkedIn Scraping**: Apply rate limiting to avoid being blocked
-3. **Production**: Set `DEBUG=false` and configure CORS properly
-4. **Focus Area**: Currently optimized for US-based investors
+1. Repository'yi fork edin
+2. Feature branch oluşturun (`git checkout -b feature/YeniOzellik`)
+3. Değişikliklerinizi commit edin (`git commit -m 'Yeni özellik eklendi'`)
+4. Branch'i push edin (`git push origin feature/YeniOzellik`)
+5. Pull Request açın
+
+### Geliştirme Kuralları
+
+- PEP 8 stil kılavuzuna uyun
+- Tüm fonksiyonlara type hints ekleyin
+- Yeni özellikler için test yazın
+- Dokümantasyonu güncelleyin
 
 ---
 
-## 📄 License
+## 📄 Lisans
 
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+Bu proje MIT Lisansı altında lisanslanmıştır. Detaylar için [LICENSE](LICENSE) dosyasına bakın.
 
 ---
 
-## 🙏 Acknowledgments
+## 🙏 Teşekkürler
 
 - [FastAPI](https://fastapi.tiangolo.com/) - Modern Python web framework
 - [Google Gemini](https://deepmind.google/technologies/gemini/) - AI language model
@@ -500,8 +313,8 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 <div align="center">
 
-**Built with ❤️ for Entrepreneurs**
+**Girişimciler için ❤️ ile yapıldı**
 
-[Report Bug](https://github.com/asilfndk/ai-investor-finder/issues) • [Request Feature](https://github.com/asilfndk/ai-investor-finder/issues)
+[Bug Bildir](https://github.com/asilfndk/InvestorFinder/issues) • [Özellik İste](https://github.com/asilfndk/InvestorFinder/issues)
 
 </div>
